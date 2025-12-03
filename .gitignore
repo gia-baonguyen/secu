@@ -1,0 +1,43 @@
+# Build outputs
+backend/target/
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Database files
+*.log
+*.trc
+*.trm
+
+# Compiled files
+*.class
+*.jar
+*.war
+*.ear
+
+# Package files
+*.tar.gz
+*.zip
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Environment files
+.env
+.env.local

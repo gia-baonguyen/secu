@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade Management System - Security Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .login-section {
+            max-width: 500px;
+            margin: 0 auto 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .status-box {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .data-section {
+            margin-top: 30px;
+        }
+
+        .data-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #333;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-student {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-lecturer {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .badge-admin {
+            background: #ffe0b2;
+            color: #e65100;
+        }
+
+        .security-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .security-info h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .security-info ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .security-info li {
+            margin-bottom: 5px;
+        }
+
+        .credentials {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .credentials h4 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+
+        .credentials code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Grade Management System</h1>
+            <p>Oracle Database Security Demo - VPD, OLS, Audit Trail</p>
+        </div>
+
+        <!-- Security Information -->
+        <div class="card security-info">
+            <h3>Security Features Demonstrated:</h3>
+            <ul>
+                <li><strong>VPD (Virtual Private Database):</strong> Row-level security - Students see only their own data</li>
+                <li><strong>OLS (Oracle Label Security):</strong> Multi-level classification of grade records</li>
+                <li><strong>Audit Trail:</strong> All database operations are logged and tracked</li>
+                <li><strong>Password Policy:</strong> BCrypt hashing, complexity requirements, account lockout</li>
+            </ul>
+        </div>
+
+        <!-- Login Section -->
+        <div class="card login-section" id="loginSection">
+            <h2 style="text-align: center; margin-bottom: 20px;">Login</h2>
+
+            <div id="statusMessage" class="hidden"></div>
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Enter username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+
+            <button class="btn btn-primary" onclick="login()">Login</button>
+
+            <div class="credentials">
+                <h4>🔑 Test Credentials - Click to Auto-Fill:</h4>
+                <p><strong>👨‍🎓 Students:</strong></p>
+                <p style="cursor: pointer;" onclick="fillLogin('nvhai', 'student123')">
+                    username: <code>nvhai</code> | password: <code>student123</code> | ID: STU001
+                </p>
+                <p style="cursor: pointer;" onclick="fillLogin('tthoa', 'student123')">
+                    username: <code>tthoa</code> | password: <code>student123</code> | ID: STU002
+                </p>
+                <p style="cursor: pointer;" onclick="fillLogin('lvminh', 'student123')">
+                    username: <code>lvminh</code> | password: <code>student123</code> | ID: STU003
+                </p>
+                <p><strong>👨‍🏫 Lecturers:</strong></p>
+                <p style="cursor: pointer;" onclick="fillLogin('nv.an', 'lecturer123')">
+                    username: <code>nv.an</code> | password: <code>lecturer123</code> | ID: LEC001
+                </p>
+                <p style="cursor: pointer;" onclick="fillLogin('tt.binh', 'lecturer123')">
+                    username: <code>tt.binh</code> | password: <code>lecturer123</code> | ID: LEC002
+                </p>
+                <p><strong>👑 Admin:</strong></p>
+                <p style="cursor: pointer;" onclick="fillLogin('admin', 'admin123')">
+                    username: <code>admin</code> | password: <code>admin123</code> | Full Access
+                </p>
+                <p><strong>👪 Relatives (⚠️ Limited - Login only):</strong></p>
+                <p style="cursor: pointer;" onclick="fillLogin('nvhung', 'relative123')">
+                    username: <code>nvhung</code> | password: <code>relative123</code> | ID: REL001
+                </p>
+            </div>
+        </div>
+
+        <!-- Dashboard Section (hidden initially) -->
+        <div id="dashboardSection" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h2>Welcome, <span id="userDisplayName"></span>!</h2>
+                        <p>User Type: <span id="userType" class="badge"></span></p>
+                    </div>
+                    <button class="btn btn-secondary" style="width: auto; padding: 10px 20px;" onclick="logout()">Logout</button>
+                </div>
+
+                <div class="status-box status-info">
+                    <strong>VPD Context Active:</strong> You can only see data authorized for your role.
+                </div>
+
+                <!-- Tabs -->
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab('profile')">My Profile</button>
+                    <button class="tab-btn" onclick="switchTab('grades')">My Grades</button>
+                    <button class="tab-btn" onclick="switchTab('students')" id="studentsTabBtn" style="display: none;">Students</button>
+                    <button class="tab-btn" onclick="switchTab('allgrades')" id="allgradesTabBtn" style="display: none;">All Grades</button>
+                </div>
+
+                <!-- Profile Tab -->
+                <div id="profileTab" class="tab-content active">
+                    <div class="data-section">
+                        <h2>📋 My Profile</h2>
+                        <button class="btn btn-primary" style="width: auto; padding: 10px 20px; margin-bottom: 15px;" onclick="loadProfile()">Load My Profile</button>
+                        <div id="profileData"></div>
+                    </div>
+                </div>
+
+                <!-- My Grades Tab -->
+                <div id="gradesTab" class="tab-content">
+                    <div class="data-section">
+                        <h2>📚 My Grades (VPD Protected)</h2>
+                        <button class="btn btn-primary" style="width: auto; padding: 10px 20px; margin-bottom: 15px;" onclick="loadGrades()">Load My Grades</button>
+                        <div class="status-box status-info">
+                            <strong>🔒 VPD Security:</strong> You only see grades you're authorized to access.
+                            Students see own grades, Lecturers see course grades, Admins see all.
+                        </div>
+                        <div id="gradesData"></div>
+                    </div>
+                </div>
+
+                <!-- Students Tab (Lecturer/Admin only) -->
+                <div id="studentsTab" class="tab-content">
+                    <div class="data-section">
+                        <h2>👥 Students (VPD Filtered)</h2>
+                        <button class="btn btn-primary" style="width: auto; padding: 10px 20px; margin-bottom: 15px;" onclick="loadStudents()">Load Students</button>
+                        <div class="status-box status-info">
+                            <strong>🔒 VPD Filtering:</strong> Lecturers see only students in their courses. Admins see all students.
+                        </div>
+                        <div id="studentsData"></div>
+                    </div>
+                </div>
+
+                <!-- All Grades Tab (Lecturer/Admin only) -->
+                <div id="allgradesTab" class="tab-content">
+                    <div class="data-section">
+                        <h2>📊 All Grades (VPD Filtered)</h2>
+                        <button class="btn btn-primary" style="width: auto; padding: 10px 20px; margin-bottom: 15px;" onclick="loadAllGrades()">Load All Grades</button>
+                        <div class="status-box status-info">
+                            <strong>🔒 VPD Filtering:</strong> Lecturers see only grades for their courses. Admins see all grades.
+                        </div>
+                        <div id="allgradesData"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8081/api';
+        let authToken = null;
+        let currentUser = null;
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = `status-box status-${type}`;
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden');
+
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showStatus('Please enter username and password', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    authToken = data.data.accessToken;
+                    currentUser = {
+                        username: data.data.userId,
+                        userType: data.data.role
+                    };
+
+                    showStatus('Login successful!', 'success');
+
+                    // Show dashboard
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+
+                    // Update user info
+                    document.getElementById('userDisplayName').textContent = currentUser.username;
+                    const userTypeBadge = document.getElementById('userType');
+                    userTypeBadge.textContent = currentUser.userType;
+                    userTypeBadge.className = `badge badge-${currentUser.userType.toLowerCase()}`;
+                } else {
+                    showStatus('Login failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Connection error: ' + error.message, 'error');
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+
+            showStatus('Logged out successfully', 'success');
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        async function loadStudents() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/students`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    let html = '<table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Major</th></tr></thead><tbody>';
+
+                    data.data.forEach(student => {
+                        html += `<tr>
+                            <td>${student.studentId}</td>
+                            <td>${student.firstName} ${student.lastName}</td>
+                            <td>${student.email}</td>
+                            <td>${student.major}</td>
+                        </tr>`;
+                    });
+
+                    html += '</tbody></table>';
+                    document.getElementById('studentsData').innerHTML = html;
+                } else {
+                    document.getElementById('studentsData').innerHTML = '<p>No students found or access denied due to VPD policy.</p>';
+                }
+            } catch (error) {
+                document.getElementById('studentsData').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function loadCourses() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/courses`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    let html = '<table><thead><tr><th>Code</th><th>Course Name</th><th>Credits</th><th>Lecturer</th><th>Semester</th></tr></thead><tbody>';
+
+                    data.data.forEach(course => {
+                        html += `<tr>
+                            <td>${course.courseCode}</td>
+                            <td>${course.courseName}</td>
+                            <td>${course.credits}</td>
+                            <td>${course.lecturerId}</td>
+                            <td>${course.semester} ${course.year}</td>
+                        </tr>`;
+                    });
+
+                    html += '</tbody></table>';
+                    document.getElementById('coursesData').innerHTML = html;
+                } else {
+                    document.getElementById('coursesData').innerHTML = '<p>No courses found.</p>';
+                }
+            } catch (error) {
+                document.getElementById('coursesData').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function loadGrades() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/grades`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    let html = '<table><thead><tr><th>Student ID</th><th>Course ID</th><th>Score</th><th>Grade</th><th>Graded Date</th></tr></thead><tbody>';
+
+                    data.data.forEach(grade => {
+                        html += `<tr>
+                            <td>${grade.studentId}</td>
+                            <td>${grade.courseId}</td>
+                            <td>${grade.score}</td>
+                            <td><strong>${grade.grade}</strong></td>
+                            <td>${grade.gradedDate || 'N/A'}</td>
+                        </tr>`;
+                    });
+
+                    html += '</tbody></table>';
+                    document.getElementById('gradesData').innerHTML = html;
+                } else {
+                    document.getElementById('gradesData').innerHTML = '<p>No grades found or access denied due to VPD policy.</p>';
+                }
+            } catch (error) {
+                document.getElementById('gradesData').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function loadAudit() {
+            // Mock audit data (would need backend endpoint)
+            const html = `
+                <table>
+                    <thead>
+                        <tr><th>Timestamp</th><th>User</th><th>Action</th><th>Table</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${new Date().toLocaleString()}</td>
+                            <td>${currentUser.username}</td>
+                            <td>SELECT</td>
+                            <td>GRADES</td>
+                            <td><span class="badge" style="background: #d4edda; color: #155724;">Success</span></td>
+                        </tr>
+                        <tr>
+                            <td>${new Date().toLocaleString()}</td>
+                            <td>${currentUser.username}</td>
+                            <td>LOGIN</td>
+                            <td>SYSTEM_USERS</td>
+                            <td><span class="badge" style="background: #d4edda; color: #155724;">Success</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin-top: 15px; color: #666;"><em>Note: Full audit logs are stored in the database AUDIT_LOG table.</em></p>
+            `;
+            document.getElementById('auditData').innerHTML = html;
+        }
+
+        // Allow Enter key to submit login
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    </script>
+</body>
+</html>
