@@ -8,6 +8,7 @@ import edu.university.grademanagement.repository.GradeRepository;
 import edu.university.grademanagement.repository.StudentRepository;
 import edu.university.grademanagement.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,9 @@ public class StudentService {
 
     @Autowired
     private VpdContextService vpdContextService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     /**
      * Get current student's profile
@@ -99,15 +103,42 @@ public class StudentService {
         // Get all enrollments
         List<Enrollment> enrollments = enrollmentRepository.findByStudentId(currentUser.getUserId());
 
-        // Get grades for each enrollment
+        // Get grades for each enrollment and set course name
         // Note: This could be optimized with a custom query
         return enrollments.stream()
                 .map(e -> this.<String>getFieldValue(e, "enrollmentId"))
                 .filter(enrollmentId -> enrollmentId != null)
-                .map(enrollmentId -> gradeRepository.findByEnrollmentId(enrollmentId))
-                .filter(opt -> opt.isPresent())
-                .map(opt -> opt.get())
+                .map(enrollmentId -> {
+                    var gradeOpt = gradeRepository.findByEnrollmentId(enrollmentId);
+                    if (gradeOpt.isPresent()) {
+                        Grade grade = gradeOpt.get();
+                        // Get course name from enrollment -> section -> course
+                        String courseName = getCourseNameByEnrollmentId(enrollmentId);
+                        grade.setCourseName(courseName);
+                        return grade;
+                    }
+                    return null;
+                })
+                .filter(grade -> grade != null)
                 .toList();
+    }
+
+    /**
+     * Get course name by enrollment ID
+     * Query: Enrollment -> CourseSection -> Course
+     */
+    private String getCourseNameByEnrollmentId(String enrollmentId) {
+        try {
+            String sql = "SELECT c.course_name " +
+                    "FROM GMS_ADMIN.ENROLLMENTS e " +
+                    "JOIN GMS_ADMIN.COURSE_SECTIONS cs ON e.section_id = cs.section_id " +
+                    "JOIN GMS_ADMIN.COURSES c ON cs.course_id = c.course_id " +
+                    "WHERE e.enrollment_id = ?";
+            String courseName = jdbcTemplate.queryForObject(sql, String.class, enrollmentId);
+            return courseName != null ? courseName : "Unknown Course";
+        } catch (Exception e) {
+            return "Unknown Course";
+        }
     }
 
     /**

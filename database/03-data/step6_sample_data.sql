@@ -301,7 +301,7 @@ VALUES ('USR006', 'nvhung', 'hashed_password_rel001', 'Relative', 'REL001', 'Y')
 
 -- Academic Affairs user
 INSERT INTO SYSTEM_USERS (user_id, username, password_hash, user_type, reference_id, is_active)
-VALUES ('USR007', 'academic', 'hashed_password_academic', 'Academic_Affairs', 'ACADEMIC001', 'Y');
+VALUES ('USR007', 'academic', 'hashed_password_academic', 'Academic_Affairs', 'ACAD001', 'Y');
 
 -- Dean user
 INSERT INTO SYSTEM_USERS (user_id, username, password_hash, user_type, reference_id, is_active)
@@ -341,7 +341,7 @@ UNION ALL
 SELECT 'GRADE_SUBMISSION_DEADLINES', COUNT(*) FROM GRADE_SUBMISSION_DEADLINES
 UNION ALL
 SELECT 'SYSTEM_USERS', COUNT(*) FROM SYSTEM_USERS
-ORDER BY TABLE_NAME;
+ORDER BY 1;
 
 PROMPT ========================================
 PROMPT Sample data loaded successfully!

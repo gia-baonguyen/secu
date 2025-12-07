@@ -1,10 +1,38 @@
--- Connect as SYSDBA and switch to ORCLPDB
+-- =============================================
+-- UNIVERSITY GRADE MANAGEMENT SYSTEM
+-- Schema Creation Script (FIXED VERSION)
+-- Removes ORA-01408 errors by removing redundant indexes
+-- =============================================
+
 ALTER SESSION SET CONTAINER = ORCLPDB;
 ALTER SESSION SET CURRENT_SCHEMA = GMS_ADMIN;
 
 SET ECHO ON
 SET FEEDBACK ON
 WHENEVER SQLERROR CONTINUE
+
+-- =============================================
+-- 0. CLEANUP (Xóa bảng cũ để chạy lại cho sạch)
+-- =============================================
+PROMPT Cleaning up old objects...
+BEGIN
+    -- Drop tables
+    FOR t IN (SELECT table_name FROM user_tables) LOOP
+        EXECUTE IMMEDIATE 'DROP TABLE ' || t.table_name || ' CASCADE CONSTRAINTS';
+    END LOOP;
+    
+    -- Drop sequences
+    FOR s IN (SELECT sequence_name FROM user_sequences) LOOP
+        EXECUTE IMMEDIATE 'DROP SEQUENCE ' || s.sequence_name;
+    END LOOP;
+EXCEPTION
+    WHEN OTHERS THEN NULL;
+END;
+/
+
+-- =============================================
+-- 1. CREATE TABLES
+-- =============================================
 
 PROMPT Creating FACULTIES table...
 CREATE TABLE FACULTIES (
@@ -231,9 +259,15 @@ ALTER TABLE FACULTIES ADD CONSTRAINT fk_faculty_dean FOREIGN KEY (dean_id) REFER
 ALTER TABLE DEPARTMENTS ADD CONSTRAINT fk_dept_head FOREIGN KEY (department_head_id) REFERENCES LECTURERS(lecturer_id);
 ALTER TABLE CLASSES ADD CONSTRAINT fk_class_homeroom FOREIGN KEY (homeroom_teacher_id) REFERENCES LECTURERS(lecturer_id);
 
+-- =============================================
+-- 2. CREATE INDEXES
+-- =============================================
 PROMPT Creating indexes...
+
+-- Index FKs (Good for performance)
 CREATE INDEX idx_student_class ON STUDENTS(class_id);
-CREATE INDEX idx_student_email ON STUDENTS(email);
+-- REMOVED: idx_student_email (Already UNIQUE)
+
 CREATE INDEX idx_lecturer_dept ON LECTURERS(department_id);
 CREATE INDEX idx_course_dept ON COURSES(department_id);
 CREATE INDEX idx_section_course ON COURSE_SECTIONS(course_id);
@@ -241,15 +275,20 @@ CREATE INDEX idx_section_lecturer ON COURSE_SECTIONS(lecturer_id);
 CREATE INDEX idx_section_semester ON COURSE_SECTIONS(semester, academic_year);
 CREATE INDEX idx_enrollment_student ON ENROLLMENTS(student_id);
 CREATE INDEX idx_enrollment_section ON ENROLLMENTS(section_id);
-CREATE INDEX idx_grade_enrollment ON GRADES(enrollment_id);
-CREATE INDEX idx_user_username ON SYSTEM_USERS(username);
+
+-- REMOVED: idx_grade_enrollment (Already UNIQUE via uk_enrollment_grade)
+-- REMOVED: idx_user_username (Already UNIQUE via username constraint)
+
 CREATE INDEX idx_audit_date ON AUDIT_LOG(operation_date);
 
+-- =============================================
+-- 3. CREATE SEQUENCES & VIEWS
+-- =============================================
 PROMPT Creating sequences...
 CREATE SEQUENCE seq_audit_log START WITH 1 INCREMENT BY 1;
 
 PROMPT Creating views...
-CREATE VIEW V_STUDENT_GRADES AS
+CREATE OR REPLACE VIEW V_STUDENT_GRADES AS
 SELECT
     s.student_id,
     s.first_name || ' ' || s.last_name AS student_name,
@@ -269,7 +308,7 @@ JOIN COURSE_SECTIONS cs ON e.section_id = cs.section_id
 JOIN COURSES c ON cs.course_id = c.course_id
 LEFT JOIN GRADES g ON e.enrollment_id = g.enrollment_id;
 
-CREATE VIEW V_STUDENT_GPA AS
+CREATE OR REPLACE VIEW V_STUDENT_GPA AS
 SELECT
     s.student_id,
     s.first_name || ' ' || s.last_name AS student_name,
@@ -288,7 +327,45 @@ GROUP BY s.student_id, s.first_name, s.last_name, cs.semester, cs.academic_year;
 PROMPT Listing all created tables...
 SELECT table_name FROM user_tables ORDER BY table_name;
 
+-- =============================================
+-- COLUMN-LEVEL SECURITY (Column-level UPDATE permissions)
+-- =============================================
+PROMPT
+PROMPT ========================================
+PROMPT Granting Column-level UPDATE permissions
+PROMPT ========================================
+
+-- Students can only UPDATE specific columns in their own profile
+-- Allowed columns: email, phone_number, contact_address
+-- Restricted columns: student_id, first_name, last_name, class_id, enrollment_date, student_status, etc.
+PROMPT
+PROMPT Granting UPDATE permissions to GMS_STUDENT (column-level)...
+GRANT UPDATE (email, phone_number, contact_address) ON gms_admin.STUDENTS TO GMS_STUDENT;
+
+-- Lecturers can only UPDATE specific columns in their own profile
+-- Allowed columns: email, phone_number, contact_address
+PROMPT
+PROMPT Granting UPDATE permissions to GMS_LECTURER (column-level)...
+GRANT UPDATE (email, phone_number, contact_address) ON gms_admin.LECTURERS TO GMS_LECTURER;
+
+-- Relatives can only UPDATE specific columns in their own profile
+-- Allowed columns: email, phone_number, contact_address
+PROMPT
+PROMPT Granting UPDATE permissions to GMS_RELATIVE (column-level)...
+GRANT UPDATE (email, phone_number, contact_address) ON gms_admin.RELATIVES TO GMS_RELATIVE;
+
+-- Note: VPD policies will ensure users can only update their own records (row-level)
+-- Column-level grants ensure users can only update specific columns (column-level)
+-- Combined: Users can only update specific columns in their own records
+
+PROMPT
+PROMPT Column-level security configured successfully!
+PROMPT - Students can UPDATE: email, phone_number, contact_address (in their own record)
+PROMPT - Lecturers can UPDATE: email, phone_number, contact_address (in their own record)
+PROMPT - Relatives can UPDATE: email, phone_number, contact_address (in their own record)
+PROMPT ========================================
+
 COMMIT;
 PROMPT ========================================
-PROMPT All tables, indexes, sequences, and views created successfully!
+PROMPT All tables, indexes, sequences, views, and permissions created successfully!
 PROMPT ========================================

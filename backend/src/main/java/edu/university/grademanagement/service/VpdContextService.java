@@ -2,7 +2,6 @@ package edu.university.grademanagement.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -31,6 +30,13 @@ public class VpdContextService {
 
     /**
      * Set VPD context for current session
+     * 
+     * NOTE: Oracle VPD context is session-specific. This method sets context in a connection
+     * from the pool. The context will persist for that session/connection.
+     * 
+     * IMPORTANT: This is called by VpdContextInterceptor BEFORE each request, ensuring
+     * context is set before any queries execute. With connection pooling, each request
+     * may use a different connection, but context is set fresh for each request.
      *
      * @param userId User ID (e.g., STU001, LEC001)
      * @param userRole User role (e.g., STUDENT, LECTURER)
@@ -45,6 +51,8 @@ public class VpdContextService {
         // Convert Spring Security role format (ADMIN, STUDENT, LECTURER) to VPD format (Admin, Student, Lecturer)
         String userType = convertRoleToUserType(userRole);
 
+        // Get connection from pool and set context
+        // Context is session-specific, so it will persist for this connection
         try (Connection conn = dataSource.getConnection()) {
             // Call Oracle procedure: GMS_ADMIN.gms_security_pkg.set_user_context(?, ?)
             String sql = String.format("BEGIN GMS_ADMIN.%s.set_user_context(?, ?); END;", vpdPackage);
@@ -58,6 +66,33 @@ public class VpdContextService {
                     "VPD context set: user_id=%s, user_type=%s", userId, userType
                 ));
             }
+        } catch (Exception e) {
+            System.err.println("Failed to set VPD context: " + e.getMessage());
+            throw e;
+        }
+    }
+    
+    /**
+     * Set VPD context using provided connection (for use within transactions)
+     * This ensures context is set in the exact connection that will be used for queries
+     *
+     * @param conn Database connection (must be from current transaction)
+     * @param userId User ID (e.g., STU001, LEC001)
+     * @param userRole User role (e.g., STUDENT, LECTURER)
+     * @throws Exception if context setting fails
+     */
+    public void setContext(Connection conn, String userId, String userRole) throws Exception {
+        if (!vpdEnabled) {
+            return;
+        }
+
+        String userType = convertRoleToUserType(userRole);
+        String sql = String.format("BEGIN GMS_ADMIN.%s.set_user_context(?, ?); END;", vpdPackage);
+
+        try (CallableStatement stmt = conn.prepareCall(sql)) {
+            stmt.setString(1, userId);
+            stmt.setString(2, userType);
+            stmt.execute();
         } catch (Exception e) {
             System.err.println("Failed to set VPD context: " + e.getMessage());
             throw e;

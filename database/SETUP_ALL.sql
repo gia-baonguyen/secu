@@ -7,22 +7,35 @@
 --   - ORCLPDB pluggable database created
 --   - Connected as SYS with SYSDBA privilege
 -- =====================================================
+-- Usage:
+--   cd D:\BaoMatHTTT\secu
+--   sqlplus sys/YOUR_PASSWORD@//localhost:1521/ORCLPDB as sysdba
+--   @database\SETUP_ALL.sql
+-- =====================================================
 
 SET ECHO ON
 SET FEEDBACK ON
 SET SERVEROUTPUT ON
 SPOOL setup_all.log
 
+-- =====================================================
+-- SET CONTAINER TO ORCLPDB
+-- =====================================================
+PROMPT Setting container to ORCLPDB...
+ALTER SESSION SET CONTAINER = ORCLPDB;
+SHOW CON_NAME;
+
 PROMPT =====================================================
 PROMPT Grade Management System - Complete Setup
 PROMPT =====================================================
 PROMPT This script will:
-PROMPT   1. Create database schema and tables
-PROMPT   2. Setup VPD (Virtual Private Database)
-PROMPT   3. Setup OLS (Oracle Label Security)
-PROMPT   4. Setup Audit Trail
-PROMPT   5. Setup Password Policies
-PROMPT   6. Load test data
+PROMPT   1. Create database users (8 users)
+PROMPT   2. Create tables and relationships (14 tables)
+PROMPT   3. Setup password profiles (5 profiles)
+PROMPT   4. Setup VPD policies (6 policies)
+PROMPT   5. Setup audit policies (8 FGA + 2 triggers)
+PROMPT   6. Load sample data (60+ records)
+PROMPT   7. Setup OLS (Oracle Label Security) - OPTIONAL
 PROMPT =====================================================
 PROMPT
 PROMPT Starting setup at:
@@ -30,89 +43,104 @@ SELECT TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') as current_time FROM dual;
 PROMPT =====================================================
 
 -- =====================================================
--- STEP 1: CREATE SCHEMA
+-- STEP 1: CREATE DATABASE USERS
 -- =====================================================
 PROMPT
 PROMPT =====================================================
-PROMPT STEP 1/6: Creating Database Schema...
+PROMPT STEP 1/6: Creating Database Users...
 PROMPT =====================================================
-@@01-schema/create_tables.sql
+@@01-schema/step1_create_users.sql
 
 PROMPT
-PROMPT Schema creation completed.
-PROMPT Press Enter to continue...
-PAUSE
-
--- =====================================================
--- STEP 2: SETUP VPD
--- =====================================================
+PROMPT Users creation completed.
 PROMPT
-PROMPT =====================================================
-PROMPT STEP 2/6: Setting up VPD (Virtual Private Database)...
-PROMPT =====================================================
-@@02-security/01_vpd_setup.sql
-
-PROMPT
-PROMPT VPD setup completed.
-PROMPT Press Enter to continue...
-PAUSE
 
 -- =====================================================
--- STEP 3: SETUP OLS
+-- STEP 2: CREATE TABLES
 -- =====================================================
 PROMPT
 PROMPT =====================================================
-PROMPT STEP 3/6: Setting up OLS (Oracle Label Security)...
+PROMPT STEP 2/6: Creating Tables and Relationships...
 PROMPT =====================================================
-PROMPT NOTE: This requires LBACSYS to be installed.
-PROMPT If OLS is not available, this step may fail (non-critical).
-PROMPT =====================================================
-@@02-security/02_ols_setup.sql
+@@01-schema/step2_create_tables.sql
 
 PROMPT
-PROMPT OLS setup completed (or skipped if not available).
-PROMPT Press Enter to continue...
-PAUSE
+PROMPT Tables creation completed.
+PROMPT
 
 -- =====================================================
--- STEP 4: SETUP AUDIT TRAIL
+-- STEP 3: SETUP PASSWORD PROFILES
 -- =====================================================
 PROMPT
 PROMPT =====================================================
-PROMPT STEP 4/6: Setting up Audit Trail...
+PROMPT STEP 3/6: Setting up Password Profiles...
 PROMPT =====================================================
-@@02-security/03_audit_setup.sql
+@@02-security/step3_password_profiles.sql
 
 PROMPT
-PROMPT Audit trail setup completed.
-PROMPT Press Enter to continue...
-PAUSE
-
--- =====================================================
--- STEP 5: SETUP PASSWORD POLICY
--- =====================================================
+PROMPT Password profiles setup completed.
 PROMPT
-PROMPT =====================================================
-PROMPT STEP 5/6: Setting up Password Policies...
-PROMPT =====================================================
-@@02-security/04_password_policy.sql
-
-PROMPT
-PROMPT Password policy setup completed.
-PROMPT Press Enter to continue...
-PAUSE
 
 -- =====================================================
--- STEP 6: LOAD TEST DATA
+-- STEP 4: SETUP VPD POLICIES
 -- =====================================================
 PROMPT
 PROMPT =====================================================
-PROMPT STEP 6/6: Loading Test Data...
+PROMPT STEP 4/6: Setting up VPD (Virtual Private Database)...
 PROMPT =====================================================
-@@03-data/simple_test_data.sql
+@@02-security/step4_vpd_policies.sql
 
 PROMPT
-PROMPT Test data loaded.
+PROMPT VPD policies setup completed.
+PROMPT
+
+-- =====================================================
+-- STEP 5: SETUP AUDIT POLICIES
+-- =====================================================
+PROMPT
+PROMPT =====================================================
+PROMPT STEP 5/6: Setting up Audit Policies...
+PROMPT =====================================================
+@@02-security/step5_audit_policies.sql
+
+PROMPT
+PROMPT Audit policies setup completed.
+PROMPT
+
+-- =====================================================
+-- STEP 6: LOAD SAMPLE DATA
+-- =====================================================
+PROMPT
+PROMPT =====================================================
+PROMPT STEP 6/6: Loading Sample Data...
+PROMPT =====================================================
+@@03-data/step6_sample_data.sql
+
+PROMPT
+PROMPT Sample data loaded.
+PROMPT
+
+-- =====================================================
+-- STEP 7: SETUP OLS (OPTIONAL - Requires OLS enabled)
+-- =====================================================
+PROMPT
+PROMPT =====================================================
+PROMPT STEP 7/7: Setting up OLS (Oracle Label Security)...
+PROMPT =====================================================
+PROMPT NOTE: This step is OPTIONAL and requires OLS to be enabled.
+PROMPT To enable OLS, run as SYSDBA:
+PROMPT   EXEC LBACSYS.CONFIGURE_OLS;
+PROMPT   EXEC LBACSYS.OLS_ENFORCEMENT.ENABLE_OLS;
+PROMPT
+PROMPT Uncomment the line below in SETUP_ALL.sql to enable OLS setup.
+PROMPT
+
+-- Uncomment the line below to enable OLS setup:
+-- @@02-security/step7_ols_setup.sql
+
+PROMPT
+PROMPT OLS setup skipped (uncomment in SETUP_ALL.sql to enable).
+PROMPT
 
 -- =====================================================
 -- FINAL VERIFICATION
@@ -123,34 +151,55 @@ PROMPT FINAL VERIFICATION
 PROMPT =====================================================
 
 PROMPT
-PROMPT 1. Checking Tables:
-SELECT owner, table_name, num_rows
+PROMPT 1. Checking Database Users:
+SELECT username, account_status, profile
+FROM dba_users
+WHERE username LIKE 'GMS_%'
+ORDER BY username;
+
+PROMPT
+PROMPT 2. Checking Tables:
+SELECT table_name, num_rows
 FROM dba_tables
 WHERE owner = 'GMS_ADMIN'
 ORDER BY table_name;
 
 PROMPT
-PROMPT 2. Checking VPD Policies:
-SELECT object_owner, object_name, policy_name, enable
+PROMPT 3. Checking VPD Policies:
+SELECT object_name, policy_name, enable
 FROM dba_policies
 WHERE object_owner = 'GMS_ADMIN';
 
 PROMPT
-PROMPT 3. Checking Audit Configuration:
+PROMPT 4. Checking Audit Configuration:
+SELECT object_name, policy_name, enabled
+FROM dba_audit_policies
+WHERE object_schema = 'GMS_ADMIN';
+
+PROMPT
+PROMPT 5. Checking Triggers:
 SELECT trigger_name, table_name, status
 FROM dba_triggers
 WHERE owner = 'GMS_ADMIN'
 AND trigger_name LIKE 'TRG_%';
 
 PROMPT
-PROMPT 4. Checking Test Users:
-SELECT username, user_type, reference_id, is_active
-FROM GMS_ADMIN.SYSTEM_USERS
-ORDER BY user_type, username;
+PROMPT 6. Checking Data Counts:
+SELECT 'STUDENTS' as table_name, COUNT(*) as records FROM gms_admin.STUDENTS
+UNION ALL
+SELECT 'LECTURERS', COUNT(*) FROM gms_admin.LECTURERS
+UNION ALL
+SELECT 'GRADES', COUNT(*) FROM gms_admin.GRADES
+UNION ALL
+SELECT 'COURSES', COUNT(*) FROM gms_admin.COURSES
+UNION ALL
+SELECT 'SYSTEM_USERS', COUNT(*) FROM gms_admin.SYSTEM_USERS;
 
 PROMPT
-PROMPT 5. Checking Security Status:
-SELECT * FROM GMS_ADMIN.v_user_security_status;
+PROMPT 7. Checking OLS Policy (if configured):
+SELECT policy_name, status
+FROM dba_sa_policies
+WHERE policy_name = 'EXAM_SEC_POLICY';
 
 -- =====================================================
 -- COMPLETION MESSAGE
@@ -163,33 +212,22 @@ PROMPT =====================================================
 PROMPT
 PROMPT All components have been set up successfully!
 PROMPT
-PROMPT Next Steps:
-PROMPT   1. Review the setup_all.log file for any errors
-PROMPT   2. Start the Spring Boot backend (port 8081)
-PROMPT   3. Open demo/index.html in your browser
-PROMPT   4. Test with the provided credentials
+PROMPT Database Users (8):
+PROMPT   GMS_ADMIN, GMS_APP, GMS_STUDENT, GMS_LECTURER,
+PROMPT   GMS_ACADEMIC, GMS_DEAN, GMS_DEPT_HEAD, GMS_RELATIVE
 PROMPT
 PROMPT Test Credentials:
-PROMPT   Students:
-PROMPT     username: nvhai   | password: student123
-PROMPT     username: tthoa   | password: student123
-PROMPT     username: lvminh  | password: student123
+PROMPT   GMS_STUDENT / Student@2024
+PROMPT   GMS_LECTURER / Lecturer@2024
+PROMPT   GMS_ACADEMIC / Academic@2024
+PROMPT   GMS_RELATIVE / Relative@2024
 PROMPT
-PROMPT   Lecturers:
-PROMPT     username: ntmai   | password: lecturer123
-PROMPT     username: tvnam   | password: lecturer123
+PROMPT Next Steps:
+PROMPT   1. Review setup_all.log for any errors
+PROMPT   2. Run tests: @04-tests/02_comprehensive_tests.sql
+PROMPT   3. Test VPD: Connect as GMS_STUDENT and query tables
 PROMPT
-PROMPT   Admin:
-PROMPT     username: admin   | password: admin123
-PROMPT
-PROMPT Security Features Enabled:
-PROMPT   - VPD (Virtual Private Database) - Row-level security
-PROMPT   - OLS (Oracle Label Security) - Classification labels
-PROMPT   - Audit Trail - Activity logging
-PROMPT   - Password Policy - Security enforcement
-PROMPT
-PROMPT Refer to demo/README.md for testing instructions.
+PROMPT Refer to HUONG_DAN.md for detailed instructions.
 PROMPT =====================================================
 
 SPOOL OFF
-EXIT;

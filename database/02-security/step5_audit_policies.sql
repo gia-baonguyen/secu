@@ -1,10 +1,17 @@
 -- =============================================
 -- UNIVERSITY GRADE MANAGEMENT SYSTEM
--- Audit Policy Configuration (Simplified)
+-- Audit Policy Configuration (FIXED VERSION)
 -- Fine-Grained Auditing for security compliance
 -- =============================================
 
 ALTER SESSION SET CONTAINER = ORCLPDB;
+
+-- =============================================
+-- FIX: Cấp quyền trực tiếp để tạo được View
+-- =============================================
+PROMPT Granting direct access to audit trails...
+GRANT SELECT ON SYS.DBA_FGA_AUDIT_TRAIL TO GMS_ADMIN;
+
 ALTER SESSION SET CURRENT_SCHEMA = GMS_ADMIN;
 
 -- =============================================
@@ -268,20 +275,21 @@ END;
 -- =============================================
 
 -- Create view for FGA audit trail
+-- FIX: Ép kiểu dữ liệu để tránh lỗi ORA-01790
 CREATE OR REPLACE VIEW V_AUDIT_TRAIL AS
 SELECT
     timestamp,
     db_user,
     object_schema,
     object_name,
-    sql_text,
+    TO_CLOB(sql_text) as sql_text,
     policy_name,
     statement_type
 FROM dba_fga_audit_trail
 WHERE object_schema = 'GMS_ADMIN'
 UNION ALL
 SELECT
-    operation_date as timestamp,
+    CAST(operation_date AS TIMESTAMP) as timestamp,
     username as db_user,
     'GMS_ADMIN' as object_schema,
     table_name as object_name,
@@ -291,8 +299,8 @@ SELECT
 FROM gms_admin.AUDIT_LOG
 ORDER BY timestamp DESC;
 
--- Grant select on audit view to admin
-GRANT SELECT ON V_AUDIT_TRAIL TO GMS_ADMIN;
+-- Grant select on audit view to admin (đã thừa vì GMS_ADMIN là owner, nhưng giữ lại để không lỗi nếu chạy trên user khác)
+-- GRANT SELECT ON V_AUDIT_TRAIL TO GMS_ADMIN;
 
 -- Display created FGA policies
 SELECT object_schema, object_name, policy_name, enabled

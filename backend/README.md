@@ -58,6 +58,8 @@ security.cors.allowed-origins=http://localhost:3000,http://localhost:3001
 
 ## 🚀 Installation & Running
 
+> **📌 Xem hướng dẫn đầy đủ:** `../START_HERE.md` - Hướng dẫn chạy từ database → backend → flutter
+
 ### Bước 1: Cài đặt Maven (nếu chưa có)
 
 **Windows:**
@@ -215,6 +217,17 @@ SQL> SELECT COUNT(*) FROM gms_admin.STUDENTS;
 - Cần implement đầy đủ để tích hợp với frontend
 - VPD context integration cần được implement trong Service layer
 
+## 🛠️ Development Tools
+
+### VS Code Setup
+
+Xem `VSCODE_SETUP.md` để biết cách:
+- Cài đặt Spring Boot Extension Pack
+- Chạy/debug application từ VS Code
+- Sử dụng Spring Boot Dashboard
+
 ## 📞 Support
 
-Xem hướng dẫn đầy đủ trong [HUONG_DAN.md](../HUONG_DAN.md)
+- **Hướng dẫn chạy hệ thống:** `../START_HERE.md`
+- **Hướng dẫn đầy đủ:** `../HUONG_DAN.md`
+- **API Testing:** `API_TEST.md`

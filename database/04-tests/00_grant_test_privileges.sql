@@ -21,6 +21,8 @@ GRANT SELECT ON gms_admin.GRADES TO GMS_STUDENT;
 GRANT SELECT ON gms_admin.ENROLLMENTS TO GMS_STUDENT;
 GRANT SELECT ON gms_admin.COURSE_SECTIONS TO GMS_STUDENT;
 GRANT SELECT ON gms_admin.COURSES TO GMS_STUDENT;
+-- Column-level UPDATE: Students can only update email, phone_number, contact_address
+GRANT UPDATE (email, phone_number, contact_address) ON gms_admin.STUDENTS TO GMS_STUDENT;
 GRANT EXECUTE ON gms_admin.gms_security_pkg TO GMS_STUDENT;
 
 -- Grant privileges for GMS_LECTURER
@@ -32,6 +34,9 @@ GRANT SELECT ON gms_admin.ENROLLMENTS TO GMS_LECTURER;
 GRANT SELECT ON gms_admin.COURSE_SECTIONS TO GMS_LECTURER;
 GRANT SELECT ON gms_admin.COURSES TO GMS_LECTURER;
 GRANT SELECT ON gms_admin.LECTURERS TO GMS_LECTURER;
+-- Column-level UPDATE: Lecturers can only update email, phone_number, contact_address in their profile
+GRANT UPDATE (email, phone_number, contact_address) ON gms_admin.LECTURERS TO GMS_LECTURER;
+-- Full UPDATE on GRADES (VPD will restrict to their courses)
 GRANT UPDATE ON gms_admin.GRADES TO GMS_LECTURER;
 GRANT EXECUTE ON gms_admin.gms_security_pkg TO GMS_LECTURER;
 
@@ -43,6 +48,8 @@ GRANT SELECT ON gms_admin.GRADES TO GMS_RELATIVE;
 GRANT SELECT ON gms_admin.ENROLLMENTS TO GMS_RELATIVE;
 GRANT SELECT ON gms_admin.STUDENTS TO GMS_RELATIVE;
 GRANT SELECT ON gms_admin.STUDENT_RELATIVES TO GMS_RELATIVE;
+-- Column-level UPDATE: Relatives can only update email, phone_number, contact_address in their profile
+GRANT UPDATE (email, phone_number, contact_address) ON gms_admin.RELATIVES TO GMS_RELATIVE;
 GRANT EXECUTE ON gms_admin.gms_security_pkg TO GMS_RELATIVE;
 
 -- Grant privileges for GMS_DEAN

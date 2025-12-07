@@ -41,3 +41,5 @@ tmp/
 # Environment files
 .env
 .env.local
+
+.fake

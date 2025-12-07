@@ -70,6 +70,10 @@ public class Grade {
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
 
+    // Transient field for course name (not persisted in database)
+    @Transient
+    private String courseName;
+
     @PrePersist
     protected void onCreate() {
         createdDate = LocalDateTime.now();

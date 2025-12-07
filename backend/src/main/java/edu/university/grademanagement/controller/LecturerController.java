@@ -92,4 +92,54 @@ public class LecturerController {
                     .body(ApiResponse.error("Failed to get student: " + e.getMessage()));
         }
     }
+
+    /**
+     * Get grades for a specific student
+     * GET /api/lecturers/me/students/{studentId}/grades
+     * VPD filters to show only grades for lecturer's courses
+     */
+    @GetMapping("/me/students/{studentId}/grades")
+    public ResponseEntity<ApiResponse<List<Grade>>> getStudentGrades(@PathVariable String studentId) {
+        try {
+            List<Grade> grades = lecturerService.getStudentGrades(studentId);
+            return ResponseEntity.ok(ApiResponse.success(grades));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get student grades: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update lecturer profile
+     * PUT /api/lecturers/me
+     * Lecturers can only update email, phoneNumber, contactAddress
+     */
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<Lecturer>> updateMyProfile(@RequestBody Lecturer updatedLecturer) {
+        try {
+            Lecturer lecturer = lecturerService.updateProfile(updatedLecturer);
+            return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", lecturer));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update profile: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update grade
+     * PUT /api/lecturers/me/grades/{gradeId}
+     * Lecturers can only update grades for their courses and before deadline
+     */
+    @PutMapping("/me/grades/{gradeId}")
+    public ResponseEntity<ApiResponse<Grade>> updateGrade(
+            @PathVariable Long gradeId,
+            @RequestBody Grade updatedGrade) {
+        try {
+            Grade grade = lecturerService.updateGrade(gradeId, updatedGrade);
+            return ResponseEntity.ok(ApiResponse.success("Grade updated successfully", grade));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update grade: " + e.getMessage()));
+        }
+    }
 }

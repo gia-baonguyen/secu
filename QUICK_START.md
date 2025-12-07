@@ -1,237 +1,245 @@
-# Grade Management System - Quick Start Guide
+# 🚀 QUICK START GUIDE
+## Chạy Database và Backend
 
-## What is This?
+---
 
-A **simple demo application** that demonstrates Oracle Database security features for your university assignment:
-- **VPD** (Virtual Private Database) - Row-level security
-- **OLS** (Oracle Label Security) - Multi-level classification
-- **Audit Trail** - Activity logging
-- **Password Policy** - Security enforcement
+## ✅ BƯỚC 1: KIỂM TRA DATABASE
 
-This is NOT a production application - it's designed to be simple and clearly demonstrate database security policies working.
-
-## Complete File Structure Created
-
-```
-grade-management-system/
-├── database/
-│   ├── SETUP_ALL.sql                    # ⭐ Master setup script - RUN THIS
-│   ├── 01-schema/
-│   │   └── create_tables.sql            # Database schema
-│   ├── 02-security/
-│   │   ├── 01_vpd_setup.sql            # ✅ VPD implementation
-│   │   ├── 02_ols_setup.sql            # ✅ OLS implementation
-│   │   ├── 03_audit_setup.sql          # ✅ Audit trail
-│   │   └── 04_password_policy.sql      # ✅ Password policies
-│   └── 03-data/
-│       └── simple_test_data.sql         # Test data with users
-│
-├── backend/                              # Spring Boot backend (already exists)
-│   └── src/main/java/.../service/
-│       └── VpdContextService.java       # VPD context service (fixed)
-│
-└── demo/
-    ├── index.html                        # ✅ Simple HTML test interface
-    └── README.md                         # ✅ Detailed documentation
-```
-
-## Setup in 3 Steps
-
-### Step 1: Database Setup (5 minutes)
-
-Run the master script:
+### 1.1 Kiểm tra Oracle Database đang chạy
 
 ```bash
-cd E:\Desktop\HCMUT\baomat\grade-management-system\database
+# Kiểm tra Oracle listener
+lsnrctl status
 
-sqlplus sys/123@localhost:1521/ORCLPDB as sysdba @SETUP_ALL.sql
+# Nếu listener không chạy, start nó:
+lsnrctl start
 ```
 
-This will:
-1. Create all tables (STUDENTS, GRADES, COURSES, etc.)
-2. Setup VPD policies and security package
-3. Setup OLS with 3 security levels
-4. Setup audit trail with triggers
-5. Setup password policies
-6. Load test data with users
-
-**Note**: If OLS step fails (LBACSYS not installed), that's OK - VPD and Audit still work.
-
-### Step 2: Start Backend (2 minutes)
+### 1.2 Kiểm tra PDB đã mở
 
 ```bash
-cd E:\Desktop\HCMUT\baomat\grade-management-system\backend
+sqlplus sys/oracle@//localhost:1521/ORCLPDB as sysdba
+```
 
+```sql
+-- Kiểm tra PDB
+SELECT name, open_mode FROM v$pdbs;
+-- Kết quả: ORCLPDB phải là READ WRITE
+
+-- Nếu chưa mở:
+ALTER PLUGGABLE DATABASE ORCLPDB OPEN;
+ALTER PLUGGABLE DATABASE ORCLPDB SAVE STATE;
+```
+
+### 1.3 Kiểm tra Database đã setup
+
+```bash
+cd secu/database/04-tests
+sqlplus sys/oracle@//localhost:1521/ORCLPDB as sysdba @RUN_ALL_TESTS.sql
+```
+
+**Kết quả mong đợi:** Tất cả tests PASSED ✅
+
+---
+
+## ✅ BƯỚC 2: CÀI ĐẶT MAVEN (Nếu chưa có)
+
+### Windows:
+
+**Option 1: Download Manual**
+1. Tải Maven từ: https://maven.apache.org/download.cgi
+2. Giải nén vào `C:\Program Files\Apache\maven`
+3. Thêm vào PATH:
+   ```powershell
+   setx PATH "%PATH%;C:\Program Files\Apache\maven\bin"
+   ```
+4. Restart terminal và kiểm tra:
+   ```bash
+   mvn -version
+   ```
+
+**Option 2: Chocolatey**
+```bash
+choco install maven
+mvn -version
+```
+
+---
+
+## ✅ BƯỚC 3: CHẠY BACKEND
+
+### Cách 1: Dùng Script (Dễ nhất)
+
+```bash
+cd secu/backend
+.\run_backend.bat
+```
+
+### Cách 2: Chạy thủ công
+
+```bash
+cd secu/backend
+
+# Build project
+mvn clean package -DskipTests
+
+# Chạy application
 mvn spring-boot:run
 ```
 
-Wait for: `Started GradeManagementApplication on port 8081`
+### Cách 3: Chạy JAR file (sau khi build)
 
-### Step 3: Open Demo Interface
-
-Simply open in browser:
-```
-E:\Desktop\HCMUT\baomat\grade-management-system\demo\index.html
+```bash
+cd secu/backend
+java -jar target/grade-management-system-1.0.0.jar
 ```
 
-## Test Credentials
+---
 
-**Students** (can only see their own data):
-- `nvhai` / `student123` → STU001
-- `tthoa` / `student123` → STU002
-- `lvminh` / `student123` → STU003
+## ✅ BƯỚC 4: KIỂM TRA BACKEND ĐÃ CHẠY
 
-**Lecturers** (see only their courses):
-- `ntmai` / `lecturer123` → LEC001 (teaches CRS001, CRS002)
-- `tvnam` / `lecturer123` → LEC002 (teaches CRS003)
+### 4.1 Kiểm tra Health Check
 
-**Admin** (sees everything):
-- `admin` / `admin123`
+Mở browser hoặc dùng curl:
+```bash
+curl http://localhost:8081/api/actuator/health
+```
 
-## Quick Test Scenarios
+**Kết quả mong đợi:**
+```json
+{
+  "status": "UP",
+  "components": {
+    "db": {
+      "status": "UP"
+    }
+  }
+}
+```
 
-### Test 1: VPD Row-Level Security (3 minutes)
+### 4.2 Test Database Connection
 
-1. Login as `nvhai` (student)
-2. Click "Load Students" → See ONLY STU001
-3. Click "Load Grades" → See ONLY STU001's grades
-4. Logout, login as `admin`
-5. Click "Load Students" → See ALL students
-6. Click "Load Grades" → See ALL grades
+```bash
+curl http://localhost:8081/api/test/db-connection
+```
 
-**Result**: VPD working! Students see only their data, admin sees all.
+**Kết quả mong đợi:**
+```json
+{
+  "status": "SUCCESS",
+  "message": "Database connection successful!",
+  "tables_count": 15,
+  "students_count": 5,
+  "grades_count": 7
+}
+```
 
-### Test 2: Audit Trail (2 minutes)
+### 4.3 Truy cập Swagger UI
 
-1. Login as any user
-2. Load some data (students, grades)
-3. Go to "Audit" tab → See logged activities
-4. In SQL*Plus, run:
-   ```sql
-   SELECT * FROM GMS_ADMIN.v_recent_audit;
+Mở browser:
+```
+http://localhost:8081/api/swagger-ui.html
+```
+
+---
+
+## 📋 CHECKLIST
+
+### Database:
+- [ ] Oracle Database đang chạy
+- [ ] Listener đang chạy (port 1521)
+- [ ] PDB ORCLPDB đã mở (READ WRITE)
+- [ ] Database users đã được tạo (8 users)
+- [ ] Tables đã được tạo (15 tables)
+- [ ] Sample data đã được load
+- [ ] Tests đã pass
+
+### Backend:
+- [ ] Java đã cài đặt (Java 17+)
+- [ ] Maven đã cài đặt (Maven 3.8+)
+- [ ] Database configuration đúng (application.properties)
+- [ ] Application đã build thành công
+- [ ] Application đã chạy (port 8081)
+- [ ] Database connection test pass
+- [ ] Health check pass
+
+---
+
+## ⚠️ TROUBLESHOOTING
+
+### Lỗi: Database connection failed
+
+**Kiểm tra:**
+1. Oracle Database đang chạy
+2. Listener đang chạy: `lsnrctl status`
+3. PDB đã mở: `SELECT name, open_mode FROM v$pdbs;`
+4. User GMS_APP tồn tại và active
+5. Password đúng: `App@2024#Connect`
+
+**Sửa:**
+```sql
+-- Mở PDB nếu chưa mở
+ALTER PLUGGABLE DATABASE ORCLPDB OPEN;
+
+-- Kiểm tra user
+SELECT username, account_status FROM dba_users WHERE username = 'GMS_APP';
+
+-- Unlock user nếu bị lock
+ALTER USER GMS_APP ACCOUNT UNLOCK;
+```
+
+### Lỗi: Maven not found
+
+**Sửa:**
+1. Cài đặt Maven (xem Bước 2)
+2. Thêm Maven vào PATH
+3. Restart terminal
+
+### Lỗi: Port 8081 already in use
+
+**Sửa:**
+1. Tìm process đang dùng port 8081:
+   ```bash
+   netstat -ano | findstr :8081
    ```
-5. See all activities logged with username, timestamp, action
+2. Kill process hoặc đổi port trong `application.properties`:
+   ```properties
+   server.port=8082
+   ```
 
-**Result**: Audit trail capturing all database operations!
+### Lỗi: Table or view does not exist
 
-### Test 3: OLS Classification (Advanced)
-
-In SQL*Plus:
+**Sửa:**
 ```sql
-CONNECT GMS_ADMIN/Admin2024Secure@localhost:1521/ORCLPDB
-
--- Check OLS labels on grades
-SELECT grade_id, student_id, score, grade,
-       LABEL_TO_CHAR(security_label) as label
-FROM GRADES;
+-- Grant quyền cho GMS_APP
+GRANT SELECT ON gms_admin.STUDENTS TO GMS_APP;
+GRANT SELECT ON gms_admin.GRADES TO GMS_APP;
+GRANT SELECT ON gms_admin.ENROLLMENTS TO GMS_APP;
+-- ... các tables khác
 ```
 
-**Result**: Grades have INTERNAL (200) label applied.
+---
 
-## Assignment Requirements Met
+## 🎯 NEXT STEPS
 
-### Nội dung 2 (5đ): Cài đặt chính sách bảo mật
+Sau khi backend chạy thành công:
 
-✅ **3+ Security Techniques Implemented:**
+1. **Test API endpoints** qua Swagger UI
+2. **Test authentication** qua `/api/auth/login`
+3. **Test database queries** qua các controllers
+4. **Integrate với frontend** (nếu có)
 
-1. **VPD** (file: `02-security/01_vpd_setup.sql`)
-   - Security package with context management
-   - Policy functions for row-level security
-   - Students see only their data, lecturers see their courses, admin sees all
+---
 
-2. **OLS** (file: `02-security/02_ols_setup.sql`)
-   - 3 security levels: PUBLIC, INTERNAL, CONFIDENTIAL
-   - Applied to GRADES table
-   - Label-based access control
+## 📝 NOTES
 
-3. **Audit Trail** (file: `02-security/03_audit_setup.sql`)
-   - AUDIT_LOG table
-   - Database triggers for automatic logging
-   - Fine-Grained Audit (FGA)
-   - Standard Oracle auditing
+- **Database Port**: 1521
+- **Backend Port**: 8081
+- **Context Path**: `/api`
+- **Database User**: `GMS_APP`
+- **Database Password**: `App@2024#Connect`
 
-4. **Bonus: Password Policy** (file: `02-security/04_password_policy.sql`)
-   - Password complexity verification
-   - Account lockout after 5 failed attempts
-   - Password expiration (90 days)
-   - BCrypt hashing in application
+---
 
-### Nội dung 3 (2đ): Hiện thực website demo
+*Last updated: 2025-12-06*
 
-✅ **Simple HTML Demo** (file: `demo/index.html`)
-- User login with authentication
-- View students, courses, grades
-- See VPD filtering in action
-- View audit trail
-- Clean, professional interface
-
-## Verify Everything Works
-
-### Check VPD:
-```sql
-SELECT * FROM dba_policies WHERE object_owner = 'GMS_ADMIN';
-```
-
-### Check OLS:
-```sql
-SELECT * FROM dba_sa_policies;
-SELECT * FROM dba_sa_levels WHERE policy_name = 'GRADE_CLASSIFICATION_POLICY';
-```
-
-### Check Audit:
-```sql
-SELECT * FROM GMS_ADMIN.v_recent_audit;
-SELECT * FROM GMS_ADMIN.v_audit_by_user;
-```
-
-### Check Test Data:
-```sql
-SELECT COUNT(*) as students FROM GMS_ADMIN.STUDENTS;
-SELECT COUNT(*) as grades FROM GMS_ADMIN.GRADES;
-SELECT COUNT(*) as users FROM GMS_ADMIN.SYSTEM_USERS;
-```
-
-## Troubleshooting
-
-### Problem: Login fails
-**Solution**: Check if backend is running on port 8081. Check browser console for errors.
-
-### Problem: No data showing
-**Solution**: VPD is working! Students see only their data. Try logging in as admin.
-
-### Problem: OLS setup failed
-**Solution**: OLS (LBACSYS) may not be installed. That's OK - VPD and Audit still demonstrate security.
-
-## Key Files for Assignment Report
-
-When writing your report, reference these files:
-
-1. **VPD Implementation**: [02-security/01_vpd_setup.sql](database/02-security/01_vpd_setup.sql)
-2. **OLS Implementation**: [02-security/02_ols_setup.sql](database/02-security/02_ols_setup.sql)
-3. **Audit Trail**: [02-security/03_audit_setup.sql](database/02-security/03_audit_setup.sql)
-4. **Demo Interface**: [demo/index.html](demo/index.html)
-5. **Detailed Docs**: [demo/README.md](demo/README.md)
-
-## What Makes This Demo Good for Your Assignment?
-
-✅ **Simple but Complete**: Not over-engineered, focuses on security policies
-✅ **Well-Documented**: Extensive comments in SQL scripts
-✅ **Easy to Test**: Clear test scenarios with expected results
-✅ **Meets Requirements**: 3+ security techniques + working demo
-✅ **Professional**: Clean code, organized structure, proper naming
-
-## Summary
-
-You now have:
-- ✅ Complete VPD implementation with row-level security
-- ✅ OLS multi-level classification
-- ✅ Comprehensive audit trail
-- ✅ Password security policies
-- ✅ Test data with realistic users
-- ✅ Simple HTML demo interface
-- ✅ Detailed documentation
-
-**Total setup time**: ~10 minutes
-**Total files created**: 7 SQL scripts + 1 HTML + 2 docs
-
-For detailed testing instructions and verification queries, see [demo/README.md](demo/README.md)
