@@ -1,427 +1,408 @@
 -- =============================================
 -- UNIVERSITY GRADE MANAGEMENT SYSTEM
 -- Step 7: Oracle Label Security (OLS) Configuration
--- Scenario: Secure Exam Question Bank
+-- Complete Setup Script with Test Cases
 -- =============================================
--- Prerequisites:
---   - Oracle Database 19c+ with OLS option
---   - OLS must be enabled (run as SYSDBA):
---     EXEC LBACSYS.CONFIGURE_OLS;
---     EXEC LBACSYS.OLS_ENFORCEMENT.ENABLE_OLS;
+--
+-- * WARNING: OLS REQUIRES ORACLE ENTERPRISE EDITION *
+-- Oracle XE does NOT fully support OLS due to missing
+-- Enterprise Edition features (SUPPLEMENTAL_LOG_DATA pragma).
+-- If using Oracle XE, skip this step and rely on VPD instead.
+--
+-- IMPORTANT: This script must be run in SEPARATE sessions!
+--
+-- Session 0: SYSDBA (in CDB$ROOT) - ENABLE OLS (if ORA-12458 occurs)
+-- Session 1: SYSDBA (in CDB$ROOT) - Unlock LBACSYS
+-- Session 2: SYSDBA (in ORCLPDB) - Create table & grant permissions
+-- Session 3: LBACSYS (in ORCLPDB) - Create OLS policy
+-- Session 4: GMS_ADMIN (in ORCLPDB) - Insert data & test
+--
 -- =============================================
+
+-- =============================================
+-- SESSION 0: ENABLE OLS (Run ONLY if you get ORA-12458!)
+-- =============================================
+-- sqlplus sys/password@localhost:1521/ORCL as sysdba
+-- =============================================
+--
+-- If you see error: ORA-12458: Oracle Label Security not enabled
+-- OLS is INSTALLED but NOT ENABLED. Run this section first!
+--
+-- IMPORTANT: After running Session 0, you MUST restart database!
+-- Then continue with Session 1.
+-- =============================================
+
+PROMPT
+PROMPT =============================================
+PROMPT SESSION 0: ENABLE OLS (Skip if OLS already enabled)
+PROMPT =============================================
 
 SET ECHO ON
 SET FEEDBACK ON
-SET SERVEROUTPUT ON
+SET SERVEROUTPUT ON SIZE UNLIMITED
+
+-- Ensure we're in CDB$ROOT
+ALTER SESSION SET CONTAINER = CDB$ROOT;
+
+-- Check current OLS status
+PROMPT
+PROMPT Checking if OLS is enabled...
+COL PARAMETER FORMAT A30
+COL VALUE FORMAT A10
+SELECT PARAMETER, VALUE FROM V$OPTION WHERE PARAMETER = 'Oracle Label Security';
+
+PROMPT
+PROMPT If VALUE = TRUE, skip to Session 1.
+PROMPT If VALUE = FALSE, run catols.sql below:
+PROMPT
+
+-- Uncomment and run this line to enable OLS:
+-- @?/rdbms/admin/catols.sql
+
+PROMPT
+PROMPT =============================================
+PROMPT AFTER RUNNING catols.sql, RESTART DATABASE:
+PROMPT =============================================
+PROMPT
+PROMPT   SHUTDOWN IMMEDIATE;
+PROMPT   STARTUP;
+PROMPT   ALTER PLUGGABLE DATABASE ALL OPEN;
+PROMPT
+PROMPT Then verify: SELECT VALUE FROM V$OPTION WHERE PARAMETER = 'Oracle Label Security';
+PROMPT (Should return TRUE)
+PROMPT
+PROMPT =============================================
+
+
+-- =============================================
+-- SESSION 1: Run as SYSDBA in CDB$ROOT
+-- =============================================
+-- sqlplus sys/password@localhost:1521/ORCL as sysdba
+-- =============================================
+
+PROMPT
+PROMPT =============================================
+PROMPT SESSION 1: CDB$ROOT - Check & Unlock LBACSYS
+PROMPT =============================================
+
+-- Make sure we're in CDB$ROOT
+ALTER SESSION SET CONTAINER = CDB$ROOT;
+
+-- Check if OLS is ENABLED (not just installed)
+PROMPT
+PROMPT Checking if OLS is ENABLED...
+SELECT PARAMETER, VALUE FROM V$OPTION WHERE PARAMETER = 'Oracle Label Security';
+
+-- Check OLS registry status
+PROMPT
+PROMPT Checking OLS installation status...
+SELECT comp_id, comp_name, version, status FROM dba_registry WHERE comp_id = 'OLS';
+
+PROMPT
+PROMPT If VALUE = FALSE above, OLS is NOT ENABLED!
+PROMPT You must run Session 0 commands first (see top of this file).
+PROMPT
+
+-- Unlock LBACSYS user (must be done in CDB$ROOT for common user)
+PROMPT Unlocking LBACSYS...
+ALTER USER LBACSYS IDENTIFIED BY "Lbacsys123#" ACCOUNT UNLOCK CONTAINER=ALL;
+
+PROMPT
+PROMPT =============================================
+PROMPT SESSION 1 COMPLETE!
+PROMPT Now run Session 2 commands in ORCLPDB
+PROMPT =============================================
+PROMPT
+PROMPT Next: sqlplus sys/password@localhost:1521/ORCLPDB as sysdba
+PROMPT
+
+
+-- =============================================
+-- SESSION 2: Run as SYSDBA in ORCLPDB
+-- =============================================
+-- sqlplus sys/password@localhost:1521/ORCLPDB as sysdba
+-- =============================================
+
+PROMPT
+PROMPT =============================================
+PROMPT SESSION 2: ORCLPDB - Setup Table & Permissions
+PROMPT =============================================
 
 ALTER SESSION SET CONTAINER = ORCLPDB;
 
--- =============================================
--- 0. CHECK OLS STATUS
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Checking OLS Installation Status...
-PROMPT =============================================
-
--- Check if OLS is installed
-SELECT comp_id, comp_name, version, status
-FROM dba_registry
-WHERE comp_id = 'OLS';
-
--- If OLS is not installed, you need to run as SYSDBA:
--- EXEC LBACSYS.CONFIGURE_OLS;
--- EXEC LBACSYS.OLS_ENFORCEMENT.ENABLE_OLS;
-
--- =============================================
--- 1. GRANT OLS ADMINISTRATIVE PRIVILEGES
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Granting OLS Administrative Privileges...
-PROMPT =============================================
-
--- Grant LBAC_DBA role to GMS_ADMIN
+-- Grant OLS admin role to GMS_ADMIN
 GRANT LBAC_DBA TO GMS_ADMIN;
 
--- Grant execute privileges on OLS packages
-GRANT EXECUTE ON sa_sysdba TO GMS_ADMIN;
-GRANT EXECUTE ON sa_components TO GMS_ADMIN;
-GRANT EXECUTE ON sa_label_admin TO GMS_ADMIN;
-GRANT EXECUTE ON sa_policy_admin TO GMS_ADMIN;
-GRANT EXECUTE ON sa_user_admin TO GMS_ADMIN;
-GRANT EXECUTE ON sa_session TO GMS_ADMIN;
+-- Grant execute on OLS packages
+GRANT EXECUTE ON LBACSYS.SA_SYSDBA TO GMS_ADMIN;
+GRANT EXECUTE ON LBACSYS.SA_COMPONENTS TO GMS_ADMIN;
+GRANT EXECUTE ON LBACSYS.SA_LABEL_ADMIN TO GMS_ADMIN;
+GRANT EXECUTE ON LBACSYS.SA_POLICY_ADMIN TO GMS_ADMIN;
+GRANT EXECUTE ON LBACSYS.SA_USER_ADMIN TO GMS_ADMIN;
+GRANT EXECUTE ON LBACSYS.SA_SESSION TO GMS_ADMIN;
 
-PROMPT OLS privileges granted to GMS_ADMIN.
-
--- =============================================
--- 2. SWITCH TO GMS_ADMIN SCHEMA
--- =============================================
-ALTER SESSION SET CURRENT_SCHEMA = GMS_ADMIN;
-
--- =============================================
--- 3. CREATE EXAM_QUESTIONS TABLE
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Creating EXAM_QUESTIONS table...
-PROMPT =============================================
-
+-- Drop and create table
 BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE EXAM_QUESTIONS CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN 
-        IF SQLCODE != -942 THEN -- Table does not exist
-            RAISE;
-        END IF;
+    EXECUTE IMMEDIATE 'DROP TABLE GMS_ADMIN.EXAM_QUESTIONS CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL;
 END;
 /
 
-CREATE TABLE EXAM_QUESTIONS (
+CREATE TABLE GMS_ADMIN.EXAM_QUESTIONS (
     question_id NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     subject_code VARCHAR2(10),
     question_text VARCHAR2(500),
     correct_answer VARCHAR2(200),
     created_by VARCHAR2(50),
-    created_date DATE DEFAULT SYSDATE,
-    -- Cột này sẽ chứa nhãn OLS (số)
-    ols_label NUMBER
+    created_date DATE DEFAULT SYSDATE
 );
 
-PROMPT EXAM_QUESTIONS table created successfully.
+-- Grant permissions on table
+GRANT SELECT, INSERT, UPDATE, DELETE ON GMS_ADMIN.EXAM_QUESTIONS TO GMS_STUDENT;
+GRANT SELECT, INSERT, UPDATE, DELETE ON GMS_ADMIN.EXAM_QUESTIONS TO GMS_LECTURER;
+GRANT SELECT, INSERT, UPDATE, DELETE ON GMS_ADMIN.EXAM_QUESTIONS TO GMS_DEAN;
 
--- =============================================
--- 4. DROP EXISTING POLICY (IF EXISTS)
--- =============================================
 PROMPT
 PROMPT =============================================
-PROMPT Dropping existing OLS policy (if any)...
+PROMPT SESSION 2 COMPLETE!
+PROMPT Now run Session 3 commands as LBACSYS
+PROMPT =============================================
+PROMPT
+PROMPT Next: sqlplus LBACSYS/Lbacsys123#@localhost:1521/ORCLPDB
+PROMPT
+
+
+-- =============================================
+-- SESSION 3: Run as LBACSYS in ORCLPDB
+-- =============================================
+-- sqlplus LBACSYS/Lbacsys123#@localhost:1521/ORCLPDB
+-- =============================================
+
+PROMPT
+PROMPT =============================================
+PROMPT SESSION 3: LBACSYS - Create OLS Policy
 PROMPT =============================================
 
+SET SERVEROUTPUT ON SIZE UNLIMITED
+
+-- Drop existing policy
 BEGIN
-    -- Xóa policy cũ nếu có (tránh lỗi khi chạy lại)
     SA_SYSDBA.DROP_POLICY(policy_name => 'EXAM_SEC_POLICY', drop_column => TRUE);
-    PROMPT Existing policy dropped.
+    DBMS_OUTPUT.PUT_LINE('Old policy dropped.');
 EXCEPTION
     WHEN OTHERS THEN
-        IF SQLCODE = -12420 THEN -- Policy does not exist
-            PROMPT No existing policy found (this is OK).
-        ELSE
-            RAISE;
-        END IF;
+        DBMS_OUTPUT.PUT_LINE('No existing policy (OK).');
 END;
 /
 
--- =============================================
--- 5. CREATE OLS POLICY
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Creating OLS Policy: EXAM_SEC_POLICY...
-PROMPT =============================================
-
+-- Create policy
 BEGIN
     SA_SYSDBA.CREATE_POLICY (
         policy_name      => 'EXAM_SEC_POLICY',
         column_name      => 'OLS_LABEL',
-        default_options  => 'READ_CONTROL, WRITE_CONTROL, LABEL_DEFAULT'
+        default_options  => 'READ_CONTROL,WRITE_CONTROL'
     );
-    PROMPT Policy EXAM_SEC_POLICY created successfully.
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error creating policy: || SQLERRM;
-        RAISE;
+    DBMS_OUTPUT.PUT_LINE('Policy EXAM_SEC_POLICY created.');
 END;
 /
 
--- =============================================
--- 6. CREATE LEVELS (Cấp độ bảo mật)
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Creating Security Levels...
-PROMPT =============================================
-
+-- Create Levels
 BEGIN
-    -- Levels (Cấp độ)
-    -- Số càng lớn -> Bảo mật càng cao
-    
-    -- Level 1000: PUBLIC - Công khai
     SA_COMPONENTS.CREATE_LEVEL('EXAM_SEC_POLICY', 1000, 'PUB', 'PUBLIC');
-    PROMPT Level PUB (1000) created.
-    
-    -- Level 2000: INTERNAL - Nội bộ
     SA_COMPONENTS.CREATE_LEVEL('EXAM_SEC_POLICY', 2000, 'INT', 'INTERNAL');
-    PROMPT Level INT (2000) created.
-    
-    -- Level 3000: CONFIDENTIAL - Mật
     SA_COMPONENTS.CREATE_LEVEL('EXAM_SEC_POLICY', 3000, 'CONF', 'CONFIDENTIAL');
-    PROMPT Level CONF (3000) created.
-    
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error creating levels: || SQLERRM;
-        RAISE;
+    DBMS_OUTPUT.PUT_LINE('Levels created: PUB, INT, CONF');
 END;
 /
 
--- =============================================
--- 7. CREATE COMPARTMENTS (Khoa/Phòng ban)
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Creating Compartments (Departments)...
-PROMPT =============================================
-
+-- Create Compartments
 BEGIN
-    -- Compartments (Khoa/Phòng ban)
     SA_COMPONENTS.CREATE_COMPARTMENT('EXAM_SEC_POLICY', 100, 'CS', 'COMPUTER SCIENCE');
-    PROMPT Compartment CS created.
-    
     SA_COMPONENTS.CREATE_COMPARTMENT('EXAM_SEC_POLICY', 200, 'EE', 'ELECTRICAL ENGINEERING');
-    PROMPT Compartment EE created.
-    
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error creating compartments: || SQLERRM;
-        RAISE;
+    DBMS_OUTPUT.PUT_LINE('Compartments created: CS, EE');
 END;
 /
 
--- =============================================
--- 8. CREATE DATA LABELS (Nhãn dữ liệu)
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Creating Data Labels...
-PROMPT =============================================
-
+-- Create Labels
 BEGIN
-    -- Label công khai (cho sinh viên)
     SA_LABEL_ADMIN.CREATE_LABEL('EXAM_SEC_POLICY', 1000, 'PUB', TRUE);
-    PROMPT Label PUB created.
-    
-    -- Label nội bộ khoa CS
     SA_LABEL_ADMIN.CREATE_LABEL('EXAM_SEC_POLICY', 2100, 'INT:CS', TRUE);
-    PROMPT Label INT:CS created.
-    
-    -- Label nội bộ khoa EE
     SA_LABEL_ADMIN.CREATE_LABEL('EXAM_SEC_POLICY', 2200, 'INT:EE', TRUE);
-    PROMPT Label INT:EE created.
-    
-    -- Label MẬT khoa CS (Đáp án thi)
     SA_LABEL_ADMIN.CREATE_LABEL('EXAM_SEC_POLICY', 3100, 'CONF:CS', TRUE);
-    PROMPT Label CONF:CS created.
-    
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error creating labels: || SQLERRM;
-        RAISE;
+    DBMS_OUTPUT.PUT_LINE('Labels created: PUB, INT:CS, INT:EE, CONF:CS');
 END;
 /
 
--- =============================================
--- 9. APPLY POLICY TO TABLE
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Applying Policy to EXAM_QUESTIONS table...
-PROMPT =============================================
-
+-- Apply policy to table
 BEGIN
     SA_POLICY_ADMIN.APPLY_TABLE_POLICY (
         policy_name    => 'EXAM_SEC_POLICY',
         schema_name    => 'GMS_ADMIN',
         table_name     => 'EXAM_QUESTIONS',
-        table_options  => 'READ_CONTROL, WRITE_CONTROL, LABEL_DEFAULT'
+        table_options  => 'READ_CONTROL,WRITE_CONTROL,LABEL_DEFAULT'
     );
-    PROMPT Policy applied to EXAM_QUESTIONS table successfully.
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error applying policy: || SQLERRM;
-        RAISE;
+    DBMS_OUTPUT.PUT_LINE('Policy applied to EXAM_QUESTIONS.');
 END;
 /
 
--- =============================================
--- 10. AUTHORIZE USERS (Cấp quyền cho users)
--- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Authorizing Users...
-PROMPT =============================================
-
--- 10.1. GMS_STUDENT: Chỉ được đọc mức thấp nhất (PUB)
-PROMPT
-PROMPT Authorizing GMS_STUDENT (PUB read only)...
+-- Authorize Users
+-- GMS_STUDENT: Only PUBLIC (can only see public questions)
 BEGIN
-    SA_USER_ADMIN.SET_USER_LABELS (
-        policy_name  => 'EXAM_SEC_POLICY',
-        user_name    => 'GMS_STUDENT',
-        max_read_label => 'PUB'
-    );
-    PROMPT GMS_STUDENT authorized: Can read PUB level only.
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error authorizing GMS_STUDENT: || SQLERRM;
-        RAISE;
+    SA_USER_ADMIN.SET_USER_LABELS('EXAM_SEC_POLICY', 'GMS_STUDENT', max_read_label => 'PUB');
+    DBMS_OUTPUT.PUT_LINE('GMS_STUDENT: PUB (read only)');
 END;
 /
 
--- 10.2. GMS_LECTURER: Được đọc/ghi mức INTERNAL của khoa CS
-PROMPT
-PROMPT Authorizing GMS_LECTURER (INT:CS read/write)...
+-- GMS_LECTURER: INTERNAL:CS (can see public + internal CS)
 BEGIN
     SA_USER_ADMIN.SET_USER_LABELS (
-        policy_name  => 'EXAM_SEC_POLICY',
-        user_name    => 'GMS_LECTURER',
-        max_read_label => 'INT:CS',
+        policy_name     => 'EXAM_SEC_POLICY',
+        user_name       => 'GMS_LECTURER',
+        max_read_label  => 'INT:CS',
         max_write_label => 'INT:CS',
         min_write_label => 'PUB',
         def_label       => 'INT:CS',
         row_label       => 'INT:CS'
     );
-    PROMPT GMS_LECTURER authorized: Can read/write INT:CS level.
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error authorizing GMS_LECTURER: || SQLERRM;
-        RAISE;
+    DBMS_OUTPUT.PUT_LINE('GMS_LECTURER: INT:CS (read/write)');
 END;
 /
 
--- 10.3. GMS_DEAN: Được đọc mức cao nhất (CONFIDENTIAL) của khoa CS
-PROMPT
-PROMPT Authorizing GMS_DEAN (CONF:CS read/write)...
+-- GMS_DEAN: CONFIDENTIAL:CS (can see all CS including confidential)
 BEGIN
     SA_USER_ADMIN.SET_USER_LABELS (
-        policy_name  => 'EXAM_SEC_POLICY',
-        user_name    => 'GMS_DEAN',
-        max_read_label => 'CONF:CS', -- Đọc được cả CONF, INT, PUB của CS
+        policy_name     => 'EXAM_SEC_POLICY',
+        user_name       => 'GMS_DEAN',
+        max_read_label  => 'CONF:CS',
         max_write_label => 'CONF:CS',
         min_write_label => 'PUB',
         def_label       => 'CONF:CS',
         row_label       => 'CONF:CS'
     );
-    PROMPT GMS_DEAN authorized: Can read/write CONF:CS level.
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error authorizing GMS_DEAN: || SQLERRM;
-        RAISE;
+    DBMS_OUTPUT.PUT_LINE('GMS_DEAN: CONF:CS (read/write)');
 END;
 /
 
--- 10.4. GMS_ADMIN: Quyền lực tối thượng (để debug)
-PROMPT
-PROMPT Authorizing GMS_ADMIN (FULL privileges)...
+-- GMS_ADMIN: FULL privileges (bypass OLS)
 BEGIN
-    SA_USER_ADMIN.SET_USER_PRIVS (
-        policy_name => 'EXAM_SEC_POLICY',
-        user_name   => 'GMS_ADMIN',
-        privileges  => 'FULL' -- Bypass hết OLS
-    );
-    PROMPT GMS_ADMIN authorized: FULL privileges (bypass OLS).
-EXCEPTION
-    WHEN OTHERS THEN
-        PROMPT Error authorizing GMS_ADMIN: || SQLERRM;
-        RAISE;
+    SA_USER_ADMIN.SET_USER_PRIVS('EXAM_SEC_POLICY', 'GMS_ADMIN', privileges => 'FULL');
+    DBMS_OUTPUT.PUT_LINE('GMS_ADMIN: FULL privileges');
 END;
 /
 
--- =============================================
--- 11. INSERT SAMPLE DATA
--- =============================================
+-- Verify policy
+PROMPT
+PROMPT Verification:
+SELECT policy_name, status FROM dba_sa_policies WHERE policy_name = 'EXAM_SEC_POLICY';
+SELECT level_num, short_name, long_name FROM dba_sa_levels WHERE policy_name = 'EXAM_SEC_POLICY' ORDER BY level_num;
+SELECT comp_num, short_name, long_name FROM dba_sa_compartments WHERE policy_name = 'EXAM_SEC_POLICY';
+SELECT label_tag, label FROM dba_sa_labels WHERE policy_name = 'EXAM_SEC_POLICY' ORDER BY label_tag;
+
 PROMPT
 PROMPT =============================================
-PROMPT Inserting Sample Data...
+PROMPT SESSION 3 COMPLETE!
+PROMPT Now run Session 4 commands as GMS_ADMIN
+PROMPT =============================================
+PROMPT
+PROMPT Next: sqlplus GMS_ADMIN/Admin@2024#Secure@localhost:1521/ORCLPDB
+PROMPT
+
+
+-- =============================================
+-- SESSION 4: Run as GMS_ADMIN in ORCLPDB
+-- =============================================
+-- sqlplus GMS_ADMIN/Admin@2024#Secure@localhost:1521/ORCLPDB
+-- =============================================
+
+PROMPT
+PROMPT =============================================
+PROMPT SESSION 4: GMS_ADMIN - Insert Data & Test
 PROMPT =============================================
 
--- Câu hỏi công khai (Ai cũng thấy)
-INSERT INTO EXAM_QUESTIONS (subject_code, question_text, correct_answer, created_by, ols_label)
-VALUES ('CS101', 'Sample Question 1: What is 1+1?', '2', 'SYSTEM', CHAR_TO_LABEL('EXAM_SEC_POLICY', 'PUB'));
+SET SERVEROUTPUT ON SIZE UNLIMITED
 
--- Câu hỏi nội bộ khoa CS (Chỉ GV và Dean CS thấy)
-INSERT INTO EXAM_QUESTIONS (subject_code, question_text, correct_answer, created_by, ols_label)
-VALUES ('CS102', 'Internal Question: Explain QuickSort?', 'O(nlogn)', 'LEC001', CHAR_TO_LABEL('EXAM_SEC_POLICY', 'INT:CS'));
+-- Insert sample data with different security labels
+PROMPT
+PROMPT Inserting sample exam questions...
 
--- Câu hỏi nội bộ khoa EE (GV khoa CS KHÔNG thấy)
-INSERT INTO EXAM_QUESTIONS (subject_code, question_text, correct_answer, created_by, ols_label)
-VALUES ('EE201', 'Internal EE: Ohm Law?', 'V=IR', 'LEC004', CHAR_TO_LABEL('EXAM_SEC_POLICY', 'INT:EE'));
+-- PUBLIC question (Everyone can see)
+INSERT INTO gms_admin.EXAM_QUESTIONS (subject_code, question_text, correct_answer, created_by, ols_label) VALUES ('CS101', 'PUBLIC: What is 1+1?', '2', 'SYSTEM', CHAR_TO_LABEL('EXAM_SEC_POLICY', 'PUB'));
 
--- Câu hỏi MẬT khoa CS (Chỉ Dean CS thấy)
-INSERT INTO EXAM_QUESTIONS (subject_code, question_text, correct_answer, created_by, ols_label)
-VALUES ('CS101', 'FINAL EXAM ANSWER KEY 2025', 'Option A, C, D...', 'DEAN001', CHAR_TO_LABEL('EXAM_SEC_POLICY', 'CONF:CS'));
+-- INTERNAL:CS question (Lecturer CS + Dean CS can see)
+INSERT INTO gms_admin.EXAM_QUESTIONS (subject_code, question_text, correct_answer, created_by, ols_label) VALUES ('CS102', 'INTERNAL CS: Explain QuickSort algorithm', 'O(n log n)', 'LEC001', CHAR_TO_LABEL('EXAM_SEC_POLICY', 'INT:CS'));
+
+-- INTERNAL:EE question (Only EE faculty can see)
+INSERT INTO gms_admin.EXAM_QUESTIONS (subject_code, question_text, correct_answer, created_by, ols_label) VALUES ('EE201', 'INTERNAL EE: State Ohm Law', 'V = I * R', 'LEC004', CHAR_TO_LABEL('EXAM_SEC_POLICY', 'INT:EE'));
+
+-- CONFIDENTIAL:CS question (Only Dean CS can see)
+INSERT INTO gms_admin.EXAM_QUESTIONS (subject_code, question_text, correct_answer, created_by, ols_label) VALUES ('CS999', 'TOP SECRET: Final Exam Key 2025', 'A,C,D,B,A...', 'DEAN001', CHAR_TO_LABEL('EXAM_SEC_POLICY', 'CONF:CS'));
 
 COMMIT;
 
-PROMPT Sample data inserted successfully.
+PROMPT
+PROMPT All data as GMS_ADMIN (FULL privileges - sees all 4 rows):
+SELECT question_id, subject_code, SUBSTR(question_text,1,35) as question, LABEL_TO_CHAR(ols_label) as label
+FROM EXAM_QUESTIONS ORDER BY question_id;
+
+PROMPT
+PROMPT =============================================
+PROMPT OLS SETUP COMPLETED!
+PROMPT =============================================
+
 
 -- =============================================
--- 12. VERIFICATION QUERIES
+-- TEST CASES
 -- =============================================
-PROMPT
-PROMPT =============================================
-PROMPT Verification Queries
-PROMPT =============================================
-
-PROMPT
-PROMPT 1. Checking OLS Policy:
-SELECT policy_name, status
-FROM dba_sa_policies
-WHERE policy_name = 'EXAM_SEC_POLICY';
-
-PROMPT
-PROMPT 2. Checking Levels:
-SELECT level_num, short_name, long_name
-FROM dba_sa_levels
-WHERE policy_name = 'EXAM_SEC_POLICY'
-ORDER BY level_num;
-
-PROMPT
-PROMPT 3. Checking Compartments:
-SELECT comp_num, short_name, long_name
-FROM dba_sa_compartments
-WHERE policy_name = 'EXAM_SEC_POLICY'
-ORDER BY comp_num;
-
-PROMPT
-PROMPT 4. Checking Labels:
-SELECT label_tag, label
-FROM dba_sa_labels
-WHERE policy_name = 'EXAM_SEC_POLICY'
-ORDER BY label_tag;
-
-PROMPT
-PROMPT 5. Checking User Authorizations:
-SELECT user_name, max_read_label, max_write_label, min_write_label
-FROM dba_sa_user_levels
-WHERE policy_name = 'EXAM_SEC_POLICY'
-ORDER BY user_name;
-
-PROMPT
-PROMPT 6. Checking Sample Data (as GMS_ADMIN - should see all):
-SELECT question_id, subject_code, 
-       SUBSTR(question_text, 1, 30) as question_preview,
-       LABEL_TO_CHAR(ols_label) as security_label
-FROM gms_admin.EXAM_QUESTIONS
-ORDER BY question_id;
 
 PROMPT
 PROMPT =============================================
-PROMPT OLS Policy Configured Successfully!
-PROMPT =============================================
-PROMPT
-PROMPT Summary:
-PROMPT   - Policy: EXAM_SEC_POLICY
-PROMPT   - Table: EXAM_QUESTIONS
-PROMPT   - Levels: PUB (1000), INT (2000), CONF (3000)
-PROMPT   - Compartments: CS, EE
-PROMPT   - Labels: PUB, INT:CS, INT:EE, CONF:CS
-PROMPT   - Users authorized: GMS_STUDENT, GMS_LECTURER, GMS_DEAN, GMS_ADMIN
-PROMPT
-PROMPT Test OLS:
-PROMPT   1. Connect as GMS_STUDENT and query EXAM_QUESTIONS (should see only PUB)
-PROMPT   2. Connect as GMS_LECTURER and query EXAM_QUESTIONS (should see PUB + INT:CS)
-PROMPT   3. Connect as GMS_DEAN and query EXAM_QUESTIONS (should see all CS labels)
-PROMPT
+PROMPT TEST CASES - Run each in separate session
 PROMPT =============================================
 
+PROMPT
+PROMPT =============================================
+PROMPT TEST 1: GMS_STUDENT (Should see 1 row - PUB only)
+PROMPT =============================================
+PROMPT
+PROMPT Connect: sqlplus GMS_STUDENT/Student@2024@localhost:1521/ORCLPDB
+PROMPT Run: SELECT question_id, subject_code, question_text, LABEL_TO_CHAR(ols_label) as label FROM GMS_ADMIN.EXAM_QUESTIONS;
+PROMPT Expected: 1 row (CS101 - PUBLIC)
+PROMPT
+
+PROMPT
+PROMPT =============================================
+PROMPT TEST 2: GMS_LECTURER (Should see 2 rows - PUB + INT:CS)
+PROMPT =============================================
+PROMPT
+PROMPT Connect: sqlplus GMS_LECTURER/Lecturer@2024@localhost:1521/ORCLPDB
+PROMPT Run: SELECT question_id, subject_code, question_text, LABEL_TO_CHAR(ols_label) as label FROM GMS_ADMIN.EXAM_QUESTIONS;
+PROMPT Expected: 2 rows (CS101 + CS102)
+PROMPT Note: Cannot see EE201 (INT:EE) or CS999 (CONF:CS)
+PROMPT
+
+PROMPT
+PROMPT =============================================
+PROMPT TEST 3: GMS_DEAN (Should see 3 rows - PUB + INT:CS + CONF:CS)
+PROMPT =============================================
+PROMPT
+PROMPT Connect: sqlplus GMS_DEAN/Dean@2024@localhost:1521/ORCLPDB
+PROMPT Run: SELECT question_id, subject_code, question_text, LABEL_TO_CHAR(ols_label) as label FROM GMS_ADMIN.EXAM_QUESTIONS;
+PROMPT Expected: 3 rows (CS101 + CS102 + CS999)
+PROMPT Note: Cannot see EE201 (INT:EE) - Dean is CS faculty only
+PROMPT
+
+PROMPT
+PROMPT =============================================
+PROMPT SUMMARY: OLS Security Matrix
+PROMPT =============================================
+PROMPT
+PROMPT | User         | Can See                    |
+PROMPT |--------------|----------------------------|
+PROMPT | GMS_STUDENT  | PUB only (1 row)           |
+PROMPT | GMS_LECTURER | PUB + INT:CS (2 rows)      |
+PROMPT | GMS_DEAN     | PUB + INT:CS + CONF:CS (3) |
+PROMPT | GMS_ADMIN    | ALL (4 rows - FULL bypass) |
+PROMPT
+PROMPT Note: INT:EE is only visible to EE faculty users
+PROMPT
+PROMPT =============================================

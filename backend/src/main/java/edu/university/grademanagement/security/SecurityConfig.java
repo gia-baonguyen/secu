@@ -70,19 +70,33 @@ public class SecurityConfig {
                         // Lecturer endpoints
                         .requestMatchers("/lecturers/**").hasAnyRole("LECTURER", "ADMIN")
 
-                        // Class Advisor (GVCN) endpoints
-                        .requestMatchers("/class-advisors/**").hasAnyRole("CLASS_ADVISOR", "ADMIN")
-
-                        // Department Head endpoints
-                        .requestMatchers("/department-heads/**").hasAnyRole("DEPARTMENT_HEAD", "ADMIN")
+                        // Relative endpoints
+                        .requestMatchers("/relatives/**").hasAnyRole("RELATIVE", "ADMIN")
 
                         // Dean endpoints
-                        .requestMatchers("/deans/**").hasAnyRole("DEAN", "ADMIN")
+                        .requestMatchers("/dean/**").hasAnyRole("DEAN", "ADMIN")
 
-                        // Academic Affairs (Phòng đào tạo) endpoints
-                        .requestMatchers("/academic-affairs/**").hasAnyRole("ACADEMIC_AFFAIRS", "ADMIN")
+                        // Department Head endpoints
+                        .requestMatchers("/department-head/**").hasAnyRole("DEPARTMENT_HEAD", "ADMIN")
+
+                        // Academic Affairs endpoints
+                        .requestMatchers("/academic/**").hasAnyRole("ACADEMIC_AFFAIRS", "ADMIN")
+
+                        // Course endpoints (view: all authenticated, modify: ACADEMIC_AFFAIRS, ADMIN)
+                        .requestMatchers("/courses/**").authenticated()
+
+                        // Deadline endpoints (view: LECTURER+, modify: ACADEMIC_AFFAIRS, ADMIN)
+                        .requestMatchers("/deadlines/**").authenticated()
+
+                        // Exam Questions endpoints (OLS protected)
+                        .requestMatchers("/exam-questions/**").authenticated()
 
                         // All other requests require authentication
+                        .requestMatchers(
+                "/v3/api-docs/**",
+                "/swagger-ui/**",
+                "/swagger-ui.html"
+            ).permitAll()
                         .anyRequest().authenticated()
                 );
 

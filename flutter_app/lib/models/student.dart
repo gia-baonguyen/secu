@@ -7,6 +7,7 @@ class Student {
   final DateTime? dateOfBirth;
   final String? address;
   final String? classId;
+  final String? studentStatus;
 
   Student({
     required this.studentId,
@@ -17,6 +18,7 @@ class Student {
     this.dateOfBirth,
     this.address,
     this.classId,
+    this.studentStatus,
   });
 
   factory Student.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class Student {
           : null,
       address: json['contactAddress'] ?? json['address'], // Backend uses contactAddress
       classId: json['classId'],
+      studentStatus: json['studentStatus']?.toString(),
     );
   }
 
@@ -46,6 +49,7 @@ class Student {
       'dateOfBirth': dateOfBirth?.toIso8601String(),
       'contactAddress': address, // Backend uses contactAddress
       'classId': classId,
+      'studentStatus': studentStatus,
     };
   }
 
@@ -54,6 +58,7 @@ class Student {
     String? email,
     String? phoneNumber,
     String? address,
+    String? studentStatus,
   }) {
     return Student(
       studentId: studentId,
@@ -64,6 +69,7 @@ class Student {
       dateOfBirth: dateOfBirth,
       address: address ?? this.address,
       classId: classId,
+      studentStatus: studentStatus ?? this.studentStatus,
     );
   }
 

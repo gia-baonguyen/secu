@@ -34,6 +34,7 @@ GRANT SELECT ON gms_admin.ENROLLMENTS TO GMS_LECTURER;
 GRANT SELECT ON gms_admin.COURSE_SECTIONS TO GMS_LECTURER;
 GRANT SELECT ON gms_admin.COURSES TO GMS_LECTURER;
 GRANT SELECT ON gms_admin.LECTURERS TO GMS_LECTURER;
+GRANT SELECT ON gms_admin.CLASSES TO GMS_LECTURER;
 -- Column-level UPDATE: Lecturers can only update email, phone_number, contact_address in their profile
 GRANT UPDATE (email, phone_number, contact_address) ON gms_admin.LECTURERS TO GMS_LECTURER;
 -- Full UPDATE on GRADES (VPD will restrict to their courses)

@@ -10,6 +10,7 @@ class Lecturer {
   final String? gender;
   final String? academicDegree;
   final String? specialization;
+  final String? lecturerStatus;
 
   Lecturer({
     required this.lecturerId,
@@ -23,6 +24,7 @@ class Lecturer {
     this.gender,
     this.academicDegree,
     this.specialization,
+    this.lecturerStatus,
   });
 
   factory Lecturer.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,7 @@ class Lecturer {
       gender: json['gender'],
       academicDegree: json['academicDegree'],
       specialization: json['specialization'],
+      lecturerStatus: json['lecturerStatus']?.toString(),
     );
   }
 
@@ -58,6 +61,7 @@ class Lecturer {
       'gender': gender,
       'academicDegree': academicDegree,
       'specialization': specialization,
+      'lecturerStatus': lecturerStatus,
     };
   }
 
@@ -66,6 +70,7 @@ class Lecturer {
     String? email,
     String? phoneNumber,
     String? contactAddress,
+    String? lecturerStatus,
   }) {
     return Lecturer(
       lecturerId: lecturerId,
@@ -79,6 +84,7 @@ class Lecturer {
       gender: gender,
       academicDegree: academicDegree,
       specialization: specialization,
+      lecturerStatus: lecturerStatus ?? this.lecturerStatus,
     );
   }
 

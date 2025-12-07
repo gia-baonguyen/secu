@@ -230,9 +230,13 @@ CREATE OR REPLACE PACKAGE BODY gms_security_pkg AS
             v_predicate := 'class_id IN (SELECT class_id FROM gms_admin.CLASSES WHERE faculty_id = ''' ||
                           SYS_CONTEXT('gms_context', 'faculty_id') || ''')';
         ELSIF v_user_type = 'Lecturer' THEN
-            -- Check if homeroom teacher
-            v_predicate := 'class_id IN (SELECT class_id FROM gms_admin.CLASSES WHERE homeroom_teacher_id = ''' ||
-                          v_user_id || ''')';
+            -- Lecturers can see students:
+            -- 1. In their homeroom class
+            -- 2. Enrolled in courses they teach
+            v_predicate := '(class_id IN (SELECT class_id FROM gms_admin.CLASSES WHERE homeroom_teacher_id = ''' || v_user_id || ''') ' ||
+                          'OR student_id IN (SELECT e.student_id FROM gms_admin.ENROLLMENTS e ' ||
+                          'JOIN gms_admin.COURSE_SECTIONS cs ON e.section_id = cs.section_id ' ||
+                          'WHERE cs.lecturer_id = ''' || v_user_id || '''))';
         ELSE
             -- No access
             v_predicate := '1=0';
@@ -274,10 +278,16 @@ CREATE OR REPLACE PACKAGE BODY gms_security_pkg AS
                           'WHERE sr.relative_id = ''' || v_user_id || ''')';
 
         ELSIF v_user_type = 'Lecturer' THEN
-            -- Lecturers can see grades for courses they teach
-            v_predicate := 'enrollment_id IN (SELECT e.enrollment_id FROM gms_admin.ENROLLMENTS e ' ||
+            -- Lecturers can see grades for:
+            -- 1. Courses they teach
+            -- 2. Students in their homeroom class
+            v_predicate := '(enrollment_id IN (SELECT e.enrollment_id FROM gms_admin.ENROLLMENTS e ' ||
                           'JOIN gms_admin.COURSE_SECTIONS cs ON e.section_id = cs.section_id ' ||
-                          'WHERE cs.lecturer_id = ''' || v_user_id || ''')';
+                          'WHERE cs.lecturer_id = ''' || v_user_id || ''') ' ||
+                          'OR enrollment_id IN (SELECT e.enrollment_id FROM gms_admin.ENROLLMENTS e ' ||
+                          'JOIN gms_admin.STUDENTS s ON e.student_id = s.student_id ' ||
+                          'JOIN gms_admin.CLASSES c ON s.class_id = c.class_id ' ||
+                          'WHERE c.homeroom_teacher_id = ''' || v_user_id || '''))';
 
         ELSIF v_user_type = 'Department_Head' THEN
             -- Department heads can see grades for courses in their department
@@ -299,12 +309,6 @@ CREATE OR REPLACE PACKAGE BODY gms_security_pkg AS
             -- Academic Affairs can see all grades
             v_predicate := '1=1';
 
-        ELSIF v_user_type = 'Homeroom_Teacher' THEN
-            -- Homeroom teachers can see grades for students in their class
-            v_predicate := 'enrollment_id IN (SELECT e.enrollment_id FROM gms_admin.ENROLLMENTS e ' ||
-                          'JOIN gms_admin.STUDENTS s ON e.student_id = s.student_id ' ||
-                          'JOIN gms_admin.CLASSES c ON s.class_id = c.class_id ' ||
-                          'WHERE c.homeroom_teacher_id = ''' || v_user_id || ''')';
         ELSE
             -- No access
             v_predicate := '1=0';

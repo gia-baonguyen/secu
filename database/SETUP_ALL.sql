@@ -136,7 +136,7 @@ PROMPT Uncomment the line below in SETUP_ALL.sql to enable OLS setup.
 PROMPT
 
 -- Uncomment the line below to enable OLS setup:
--- @@02-security/step7_ols_setup.sql
+@@02-security/step7_ols_setup.sql
 
 PROMPT
 PROMPT OLS setup skipped (uncomment in SETUP_ALL.sql to enable).

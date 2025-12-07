@@ -7,6 +7,11 @@ import 'gpa_screen.dart';
 import 'lecturer_students_screen.dart';
 import 'admin_students_screen.dart';
 import 'admin_grades_screen.dart';
+import 'exam_questions_screen.dart';
+import 'relative_children_screen.dart';
+import 'dean_dashboard_screen.dart';
+import 'department_head_dashboard_screen.dart';
+import 'academic_affairs_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,6 +86,118 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icon(Icons.people_outlined),
           selectedIcon: Icon(Icons.people),
           label: 'Students',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ];
+    } else if (user?.role == 'RELATIVE') {
+      // For Relative: Home, My Children, Profile
+      screens = [
+        HomeTab(onNavigate: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        }),
+        const RelativeChildrenScreen(),
+        const ProfileScreen(),
+      ];
+      destinations = const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.family_restroom_outlined),
+          selectedIcon: Icon(Icons.family_restroom),
+          label: 'Children',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ];
+    } else if (user?.role == 'DEAN') {
+      // For Dean: Home, Dashboard, Profile
+      screens = [
+        HomeTab(onNavigate: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        }),
+        const DeanDashboardScreen(),
+        const ProfileScreen(),
+      ];
+      destinations = const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ];
+    } else if (user?.role == 'DEPARTMENT_HEAD') {
+      // For Department Head: Home, Dashboard, Profile
+      screens = [
+        HomeTab(onNavigate: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        }),
+        const DepartmentHeadDashboardScreen(),
+        const ProfileScreen(),
+      ];
+      destinations = const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ];
+    } else if (user?.role == 'ACADEMIC_AFFAIRS') {
+      // For Academic Affairs: Home, Dashboard, Profile
+      screens = [
+        HomeTab(onNavigate: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        }),
+        const AcademicAffairsDashboardScreen(),
+        const ProfileScreen(),
+      ];
+      destinations = const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.admin_panel_settings_outlined),
+          selectedIcon: Icon(Icons.admin_panel_settings),
+          label: 'Dashboard',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),
@@ -196,14 +313,8 @@ class HomeTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Chip(
-                      label: Text(user.role),
-                      avatar: Icon(
-                        user.role == 'STUDENT'
-                            ? Icons.school
-                            : user.role == 'LECTURER'
-                                ? Icons.person
-                                : Icons.admin_panel_settings,
-                      ),
+                      label: Text(_getRoleDisplayName(user.role)),
+                      avatar: Icon(_getRoleIcon(user.role)),
                     ),
                   ],
                 ],
@@ -228,7 +339,7 @@ class HomeTab extends StatelessWidget {
             mainAxisSpacing: 16,
             childAspectRatio: 1.5,
             children: [
-              // Only show student-specific actions for STUDENT role
+              // STUDENT actions
               if (user?.role == 'STUDENT') ...[
                 _buildActionCard(
                   context,
@@ -236,7 +347,6 @@ class HomeTab extends StatelessWidget {
                   Icons.grade,
                   Colors.blue,
                   () {
-                    // Navigate to grades tab (index 1)
                     if (onNavigate != null) onNavigate!(1);
                   },
                 ),
@@ -246,12 +356,11 @@ class HomeTab extends StatelessWidget {
                   Icons.calculate,
                   Colors.green,
                   () {
-                    // Navigate to GPA tab (index 2)
                     if (onNavigate != null) onNavigate!(2);
                   },
                 ),
               ],
-              // Show role-specific actions for LECTURER
+              // LECTURER actions
               if (user?.role == 'LECTURER') ...[
                 _buildActionCard(
                   context,
@@ -259,12 +368,59 @@ class HomeTab extends StatelessWidget {
                   Icons.people,
                   Colors.blue,
                   () {
-                    // Navigate to students tab (index 1)
                     if (onNavigate != null) onNavigate!(1);
                   },
                 ),
               ],
-              // Show role-specific actions for ADMIN
+              // RELATIVE actions
+              if (user?.role == 'RELATIVE') ...[
+                _buildActionCard(
+                  context,
+                  'My Children',
+                  Icons.family_restroom,
+                  Colors.blue,
+                  () {
+                    if (onNavigate != null) onNavigate!(1);
+                  },
+                ),
+              ],
+              // DEAN actions
+              if (user?.role == 'DEAN') ...[
+                _buildActionCard(
+                  context,
+                  'Faculty Dashboard',
+                  Icons.dashboard,
+                  Colors.blue,
+                  () {
+                    if (onNavigate != null) onNavigate!(1);
+                  },
+                ),
+              ],
+              // DEPARTMENT_HEAD actions
+              if (user?.role == 'DEPARTMENT_HEAD') ...[
+                _buildActionCard(
+                  context,
+                  'Department Dashboard',
+                  Icons.dashboard,
+                  Colors.blue,
+                  () {
+                    if (onNavigate != null) onNavigate!(1);
+                  },
+                ),
+              ],
+              // ACADEMIC_AFFAIRS actions
+              if (user?.role == 'ACADEMIC_AFFAIRS') ...[
+                _buildActionCard(
+                  context,
+                  'System Dashboard',
+                  Icons.admin_panel_settings,
+                  Colors.blue,
+                  () {
+                    if (onNavigate != null) onNavigate!(1);
+                  },
+                ),
+              ],
+              // ADMIN actions
               if (user?.role == 'ADMIN') ...[
                 _buildActionCard(
                   context,
@@ -272,7 +428,6 @@ class HomeTab extends StatelessWidget {
                   Icons.people,
                   Colors.blue,
                   () {
-                    // Navigate to students tab (index 1)
                     if (onNavigate != null) onNavigate!(1);
                   },
                 ),
@@ -282,7 +437,6 @@ class HomeTab extends StatelessWidget {
                   Icons.grade,
                   Colors.green,
                   () {
-                    // Navigate to grades tab (index 2)
                     if (onNavigate != null) onNavigate!(2);
                   },
                 ),
@@ -294,24 +448,22 @@ class HomeTab extends StatelessWidget {
                 Icons.person,
                 Colors.orange,
                 () {
-                  // Navigate to profile tab (last tab)
-                  // STUDENT: 4 tabs (0,1,2,3) -> Profile = 3
-                  // LECTURER: 3 tabs (0,1,2) -> Profile = 2
-                  // ADMIN: 4 tabs (0,1,2,3) -> Profile = 3
-                  final profileIndex = user?.role == 'LECTURER' ? 2 : 3;
+                  // Profile is the last tab for all roles
+                  final profileIndex = _getProfileIndex(user?.role);
                   if (onNavigate != null) onNavigate!(profileIndex);
                 },
               ),
+              // Exam Questions - OLS protected (available to all roles, filtered by OLS)
               _buildActionCard(
                 context,
-                'Settings',
-                Icons.settings,
-                Colors.purple,
+                'Exam Questions',
+                Icons.quiz,
+                Colors.teal,
                 () {
-                  // Navigate to settings
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Settings coming soon'),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ExamQuestionsScreen(),
                     ),
                   );
                 },
@@ -321,6 +473,65 @@ class HomeTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  int _getProfileIndex(String? role) {
+    switch (role) {
+      case 'STUDENT':
+        return 3; // Home, Grades, GPA, Profile
+      case 'LECTURER':
+      case 'RELATIVE':
+      case 'DEAN':
+      case 'DEPARTMENT_HEAD':
+      case 'ACADEMIC_AFFAIRS':
+        return 2; // Home, Dashboard/Students, Profile
+      case 'ADMIN':
+        return 3; // Home, Students, Grades, Profile
+      default:
+        return 2;
+    }
+  }
+
+  String _getRoleDisplayName(String role) {
+    switch (role) {
+      case 'STUDENT':
+        return 'Student';
+      case 'LECTURER':
+        return 'Lecturer';
+      case 'RELATIVE':
+        return 'Parent/Guardian';
+      case 'DEAN':
+        return 'Dean';
+      case 'DEPARTMENT_HEAD':
+        return 'Department Head';
+      case 'ACADEMIC_AFFAIRS':
+        return 'Academic Affairs';
+      case 'ADMIN':
+        return 'Administrator';
+      default:
+        return role;
+    }
+  }
+
+  IconData _getRoleIcon(String role) {
+    switch (role) {
+      case 'STUDENT':
+        return Icons.school;
+      case 'LECTURER':
+        return Icons.person;
+      case 'RELATIVE':
+        return Icons.family_restroom;
+      case 'DEAN':
+        return Icons.account_balance;
+      case 'DEPARTMENT_HEAD':
+        return Icons.business;
+      case 'ACADEMIC_AFFAIRS':
+        return Icons.admin_panel_settings;
+      case 'ADMIN':
+        return Icons.admin_panel_settings;
+      default:
+        return Icons.person;
+    }
   }
 
   Widget _buildActionCard(
@@ -353,4 +564,3 @@ class HomeTab extends StatelessWidget {
     );
   }
 }
-

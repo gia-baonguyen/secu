@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../models/student.dart';
 import '../models/lecturer.dart';
+import '../models/relative.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,6 +16,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   Student? _student;
   Lecturer? _lecturer;
+  Relative? _relative;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -38,6 +40,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _loadStudentProfile(authService.token!);
     } else if (authService.currentUser?.role == 'LECTURER') {
       await _loadLecturerProfile(authService.token!);
+    } else if (authService.currentUser?.role == 'RELATIVE') {
+      await _loadRelativeProfile(authService.token!);
     } else {
       setState(() {
         _isLoading = false;
@@ -79,6 +83,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (response.success && response.data != null) {
         setState(() {
           _lecturer = response.data;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = response.message ?? 'Failed to load profile';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadRelativeProfile(String token) async {
+    try {
+      final apiService = ApiService();
+      final response = await apiService.getRelativeProfile(token);
+
+      if (response.success && response.data != null) {
+        setState(() {
+          _relative = response.data;
           _isLoading = false;
         });
       } else {
@@ -151,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                _student?.fullName ?? _lecturer?.fullName ?? user?.username ?? 'User',
+                                _student?.fullName ?? _lecturer?.fullName ?? _relative?.fullName ?? user?.username ?? 'User',
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineSmall
@@ -171,8 +199,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Update Profile Button (for Student and Lecturer)
-                      if (user?.role == 'STUDENT' || user?.role == 'LECTURER')
+                      // Update Profile Button (for Student, Lecturer, and Relative)
+                      if (user?.role == 'STUDENT' || user?.role == 'LECTURER' || user?.role == 'RELATIVE')
                         Card(
                           child: Padding(
                             padding: const EdgeInsets.all(16),
@@ -293,6 +321,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
+
+                      // Relative info
+                      if (_relative != null)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Relative Information',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const Divider(),
+                                _buildInfoRow(
+                                    'Relative ID', _relative!.relativeId ?? 'N/A'),
+                                if (_relative!.firstName != null)
+                                  _buildInfoRow(
+                                      'First Name', _relative!.firstName!),
+                                if (_relative!.lastName != null)
+                                  _buildInfoRow(
+                                      'Last Name', _relative!.lastName!),
+                                if (_relative!.email != null)
+                                  _buildInfoRow('Email', _relative!.email!),
+                                if (_relative!.phoneNumber != null)
+                                  _buildInfoRow(
+                                      'Phone', _relative!.phoneNumber!),
+                                if (_relative!.contactAddress != null)
+                                  _buildInfoRow(
+                                      'Address', _relative!.contactAddress!),
+                                if (_relative!.occupation != null)
+                                  _buildInfoRow(
+                                      'Occupation', _relative!.occupation!),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -334,6 +404,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _showUpdateStudentDialog(context);
     } else if (user?.role == 'LECTURER' && _lecturer != null) {
       _showUpdateLecturerDialog(context);
+    } else if (user?.role == 'RELATIVE' && _relative != null) {
+      _showUpdateRelativeDialog(context);
     }
   }
 
@@ -485,6 +557,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SnackBar(content: Text('Profile updated successfully')),
         );
         _loadLecturerProfile(authService.token!);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response.message ?? 'Failed to update profile')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  void _showUpdateRelativeDialog(BuildContext context) {
+    final emailController = TextEditingController(text: _relative?.email ?? '');
+    final phoneController = TextEditingController(text: _relative?.phoneNumber ?? '');
+    final addressController = TextEditingController(text: _relative?.contactAddress ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(labelText: 'Phone Number'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: addressController,
+              decoration: const InputDecoration(labelText: 'Address'),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final updatedRelative = _relative!.copyWith(
+                email: emailController.text.isEmpty ? null : emailController.text,
+                phoneNumber: phoneController.text.isEmpty ? null : phoneController.text,
+                contactAddress: addressController.text.isEmpty ? null : addressController.text,
+              );
+
+              await _updateRelativeProfile(context, updatedRelative);
+              Navigator.pop(context);
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updateRelativeProfile(BuildContext context, Relative relative) async {
+    final authService = context.read<AuthService>();
+    if (authService.token == null) return;
+
+    try {
+      final apiService = ApiService();
+      final response = await apiService.updateRelativeProfile(authService.token!, relative);
+
+      if (response.success && response.data != null) {
+        setState(() {
+          _relative = response.data;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+        _loadRelativeProfile(authService.token!);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(response.message ?? 'Failed to update profile')),

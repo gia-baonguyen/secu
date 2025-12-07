@@ -365,7 +365,7 @@ curl -X POST http://localhost:8081/api/auth/login \
   - **INT:CS/EE:** Câu hỏi nội bộ khoa (giảng viên và trưởng khoa)
   - **CONF:CS:** Đáp án thi mật (chỉ trưởng khoa)
 - **Implementation:** `step7_ols_setup.sql` (OPTIONAL - requires OLS enabled)
-- **Documentation:** `OLS_SETUP_GUIDE.md` - Hướng dẫn chi tiết về OLS
+- **Documentation:** `OLS_COMPLETE_SETUP_GUIDE.md` - ⭐ Hướng dẫn setup OLS hoàn chỉnh
 
 **Note:** OLS là tính năng tùy chọn của Oracle. Cần enable trước khi sử dụng:
 
@@ -377,8 +377,7 @@ EXEC LBACSYS.OLS_ENFORCEMENT.ENABLE_OLS;
 **Chi tiết về OLS:**
 
 - OLS chỉ áp dụng cho bảng `EXAM_QUESTIONS` (bảng mới, không ảnh hưởng hệ thống hiện tại)
-- Xem `OLS_SETUP_GUIDE.md` để biết cách enable và test
-- Xem `OLS_IMPACT_ANALYSIS.md` để hiểu ảnh hưởng của OLS
+- Xem `OLS_COMPLETE_SETUP_GUIDE.md` để biết cách setup, test và troubleshoot
 
 ---
 
