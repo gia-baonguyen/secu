@@ -5,10 +5,10 @@
 -- Usage: sqlplus sys/YOUR_PASSWORD@//localhost:1521/ORCLPDB as sysdba @MAINTENANCE_SCRIPTS.sql
 --
 -- This script includes:
--- PART 1: Grant permissions to GMS_APP (backend)
+-- PART 1: Grant permissions to GMS_ACADEMIC (backend)
 -- PART 2: Update password hashes for authentication
 -- PART 3: Fix session and idle time limits (ORA-02391, ORA-02396)
--- PART 4: Fix GMS_APP VPD bypass (allow GMS_APP to see all data)
+-- PART 4: Fix GMS_ACADEMIC VPD bypass (allow GMS_ACADEMIC to see all data)
 -- PART 5: Verify permissions
 -- =============================================
 
@@ -21,16 +21,16 @@ PROMPT ========================================
 PROMPT
 
 -- =============================================
--- PART 1: GRANT PERMISSIONS TO GMS_APP
+-- PART 1: GRANT PERMISSIONS TO GMS_ACADEMIC
 -- =============================================
-PROMPT [PART 1/5] Granting permissions to GMS_APP...
+PROMPT [PART 1/5] Granting permissions to GMS_ACADEMIC...
 PROMPT ========================================
 
 -- Grant SELECT on all tables (automatic)
 BEGIN
     FOR t IN (SELECT table_name FROM all_tables WHERE owner = 'GMS_ADMIN') LOOP
         BEGIN
-            EXECUTE IMMEDIATE 'GRANT SELECT ON gms_admin.' || t.table_name || ' TO GMS_APP';
+            EXECUTE IMMEDIATE 'GRANT SELECT ON gms_admin.' || t.table_name || ' TO GMS_ACADEMIC';
         EXCEPTION
             WHEN OTHERS THEN NULL;
         END;
@@ -42,7 +42,7 @@ END;
 BEGIN
     FOR t IN (SELECT table_name FROM all_tables WHERE owner = 'GMS_ADMIN') LOOP
         BEGIN
-            EXECUTE IMMEDIATE 'GRANT INSERT, UPDATE, DELETE ON gms_admin.' || t.table_name || ' TO GMS_APP';
+            EXECUTE IMMEDIATE 'GRANT INSERT, UPDATE, DELETE ON gms_admin.' || t.table_name || ' TO GMS_ACADEMIC';
         EXCEPTION
             WHEN OTHERS THEN NULL;
         END;
@@ -54,7 +54,7 @@ END;
 BEGIN
     FOR v IN (SELECT view_name FROM all_views WHERE owner = 'GMS_ADMIN') LOOP
         BEGIN
-            EXECUTE IMMEDIATE 'GRANT SELECT ON gms_admin.' || v.view_name || ' TO GMS_APP';
+            EXECUTE IMMEDIATE 'GRANT SELECT ON gms_admin.' || v.view_name || ' TO GMS_ACADEMIC';
         EXCEPTION
             WHEN OTHERS THEN NULL;
         END;
@@ -64,14 +64,14 @@ END;
 
 -- Grant EXECUTE on security package
 BEGIN
-    EXECUTE IMMEDIATE 'GRANT EXECUTE ON gms_admin.gms_security_pkg TO GMS_APP';
+    EXECUTE IMMEDIATE 'GRANT EXECUTE ON gms_admin.gms_security_pkg TO GMS_ACADEMIC';
 EXCEPTION
     WHEN OTHERS THEN NULL;
 END;
 /
 
 COMMIT;
-PROMPT ✓ Permissions granted to GMS_APP successfully!
+PROMPT ✓ Permissions granted to GMS_ACADEMIC successfully!
 PROMPT
 
 -- =============================================
@@ -121,16 +121,16 @@ PROMPT
 COMMIT;
 
 -- =============================================
--- PART 4: FIX GMS_APP VPD BYPASS
+-- PART 4: FIX GMS_ACADEMIC VPD BYPASS
 -- =============================================
-PROMPT [PART 4/5] Fixing VPD policies for GMS_APP bypass...
+PROMPT [PART 4/5] Fixing VPD policies for GMS_ACADEMIC bypass...
 PROMPT ========================================
 
--- Recompile VPD policies to allow GMS_APP bypass
+-- Recompile VPD policies to allow GMS_ACADEMIC bypass
 ALTER SESSION SET CURRENT_SCHEMA = GMS_ADMIN;
 @@../02-security/step4_vpd_policies.sql
 
-PROMPT ✓ VPD policies updated - GMS_APP can now see all data
+PROMPT ✓ VPD policies updated - GMS_ACADEMIC can now see all data
 PROMPT
 
 COMMIT;
@@ -145,7 +145,7 @@ SELECT
     COUNT(DISTINCT table_name) as tables_with_select
 FROM dba_tab_privs
 WHERE owner = 'GMS_ADMIN'
-  AND grantee = 'GMS_APP'
+  AND grantee = 'GMS_ACADEMIC'
   AND privilege = 'SELECT'
   AND table_name NOT LIKE 'V_%';
 
@@ -153,7 +153,7 @@ SELECT
     COUNT(DISTINCT table_name) as views_with_select
 FROM dba_tab_privs
 WHERE owner = 'GMS_ADMIN'
-  AND grantee = 'GMS_APP'
+  AND grantee = 'GMS_ACADEMIC'
   AND privilege = 'SELECT'
   AND table_name LIKE 'V_%';
 
@@ -163,10 +163,10 @@ PROMPT MAINTENANCE COMPLETE!
 PROMPT ========================================
 PROMPT
 PROMPT Summary:
-PROMPT ✓ GMS_APP permissions granted
+PROMPT ✓ GMS_ACADEMIC permissions granted
 PROMPT ✓ Password hashes updated
 PROMPT ✓ Session/idle time limits fixed
-PROMPT ✓ VPD bypass configured for GMS_APP
+PROMPT ✓ VPD bypass configured for GMS_ACADEMIC
 PROMPT
 PROMPT Test users (Password: password123):
 PROMPT - Username: nvhai (STU001) - Password: password123
