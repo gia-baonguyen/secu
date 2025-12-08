@@ -16,6 +16,11 @@ import java.util.List;
  * Relative Controller
  * Handles endpoints for relatives (parents/guardians)
  * All endpoints require RELATIVE role
+ * 
+ * SECURITY POLICY:
+ * - Relatives can ONLY view GRADES of their linked children
+ * - Student personal info (first_name, last_name, etc.) is HIDDEN
+ * - This implements column-level security at application layer
  */
 @RestController
 @RequestMapping("/relatives")
@@ -59,6 +64,9 @@ public class RelativeController {
     /**
      * Get my children (linked students)
      * GET /relatives/children
+     * 
+     * NOTE: Returns ONLY student_id and class_id
+     * Personal info (first_name, last_name) is HIDDEN for privacy
      */
     @GetMapping("/children")
     public ResponseEntity<ApiResponse<List<Student>>> getMyChildren() {
@@ -74,6 +82,9 @@ public class RelativeController {
     /**
      * Get a specific child's information
      * GET /relatives/children/{studentId}
+     * 
+     * NOTE: Returns ONLY student_id and class_id
+     * Personal info (first_name, last_name) is HIDDEN for privacy
      */
     @GetMapping("/children/{studentId}")
     public ResponseEntity<ApiResponse<Student>> getChild(@PathVariable String studentId) {

@@ -283,10 +283,30 @@ BEGIN
 END;
 /
 
+-- GMS_DEAN: CONFIDENTIAL:CS (can see all CS including confidential)
+BEGIN
+    SA_USER_ADMIN.SET_USER_LABELS (
+        policy_name     => 'EXAM_SEC_POLICY',
+        user_name       => 'GMS_ACADEMIC',
+        max_read_label  => 'CONF:CS',
+        max_write_label => 'CONF:CS',
+        min_write_label => 'PUB',
+        def_label       => 'CONF:CS',
+        row_label       => 'CONF:CS'
+    );
+    DBMS_OUTPUT.PUT_LINE('GMS_ACADEMIC: CONF:CS (read/write)');
+END;
+/
+
 -- GMS_ADMIN: FULL privileges (bypass OLS)
 BEGIN
     SA_USER_ADMIN.SET_USER_PRIVS('EXAM_SEC_POLICY', 'GMS_ADMIN', privileges => 'FULL');
     DBMS_OUTPUT.PUT_LINE('GMS_ADMIN: FULL privileges');
+END;
+
+BEGIN
+    SA_USER_ADMIN.SET_USER_PRIVS('EXAM_SEC_POLICY', 'GMS_ACADEMIC', privileges => 'FULL');
+    DBMS_OUTPUT.PUT_LINE('GMS_ACADEMIC: FULL privileges');
 END;
 /
 

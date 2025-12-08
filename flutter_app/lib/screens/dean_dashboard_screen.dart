@@ -184,7 +184,7 @@ class _DeanDashboardScreenState extends State<DeanDashboardScreen>
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 1.5,
+              childAspectRatio: 1.6,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               children: [
@@ -203,21 +203,36 @@ class _DeanDashboardScreenState extends State<DeanDashboardScreen>
   Widget _buildStatCard(String title, dynamic value, IconData icon, Color color) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value.toString(),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value.toString(),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-            Text(title, style: const TextStyle(color: Colors.grey)),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: const TextStyle(color: Colors.grey, fontSize: 10),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -11,24 +11,25 @@ class AcademicAffairsDashboardScreen extends StatefulWidget {
   const AcademicAffairsDashboardScreen({super.key});
 
   @override
-  State<AcademicAffairsDashboardScreen> createState() => _AcademicAffairsDashboardScreenState();
+  State<AcademicAffairsDashboardScreen> createState() =>
+      _AcademicAffairsDashboardScreenState();
 }
 
-class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboardScreen>
+class _AcademicAffairsDashboardScreenState
+    extends State<AcademicAffairsDashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   Map<String, dynamic>? _statistics;
   List<Student> _students = [];
   List<Lecturer> _lecturers = [];
   List<Grade> _grades = [];
-  List<AuditLog> _auditLogs = [];
   bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadData();
   }
 
@@ -45,7 +46,7 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
     });
 
     final authService = Provider.of<AuthService>(context, listen: false);
-        if (authService.token == null) return;
+    if (authService.token == null) return;
     final token = authService.token!;
 
     if (token == null) {
@@ -84,10 +85,6 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
       }
 
       // Load audit logs
-      final auditResponse = await apiService.getAuditLogs(token);
-      if (auditResponse.success && auditResponse.data != null) {
-        _auditLogs = auditResponse.data!;
-      }
 
       setState(() {
         _isLoading = false;
@@ -190,9 +187,9 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
     if (grade.gradeId == null) return;
 
     final authService = Provider.of<AuthService>(context, listen: false);
-      if (authService.token == null) return;
-      final token = authService.token!;
-      
+    if (authService.token == null) return;
+    final token = authService.token!;
+
     if (token != null) {
       final apiService = ApiService();
       final response = await apiService.approveGrade(token, grade.gradeId!);
@@ -223,7 +220,6 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
             Tab(icon: Icon(Icons.people), text: 'Students'),
             Tab(icon: Icon(Icons.school), text: 'Lecturers'),
             Tab(icon: Icon(Icons.grade), text: 'Grades'),
-            Tab(icon: Icon(Icons.history), text: 'Audit Logs'),
           ],
         ),
         actions: [
@@ -240,7 +236,8 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+                      Text(_errorMessage!,
+                          style: const TextStyle(color: Colors.red)),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadData,
@@ -256,7 +253,6 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
                     _buildStudentsTab(),
                     _buildLecturersTab(),
                     _buildGradesTab(),
-                    _buildAuditLogsTab(),
                   ],
                 ),
     );
@@ -294,21 +290,25 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
               ),
             ),
             const SizedBox(height: 16),
-
-            Text('System Statistics', style: Theme.of(context).textTheme.titleLarge),
+            Text('System Statistics',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 1.5,
+              childAspectRatio: 1.6,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               children: [
-                _buildStatCard('Students', _statistics?['totalStudents'] ?? 0, Icons.people, Colors.blue),
-                _buildStatCard('Lecturers', _statistics?['totalLecturers'] ?? 0, Icons.school, Colors.green),
-                _buildStatCard('Grades', _statistics?['totalGrades'] ?? 0, Icons.grade, Colors.orange),
-                _buildStatCard('Faculties', _statistics?['totalFaculties'] ?? 0, Icons.business, Colors.purple),
+                _buildStatCard('Students', _statistics?['totalStudents'] ?? 0,
+                    Icons.people, Colors.blue),
+                _buildStatCard('Lecturers', _statistics?['totalLecturers'] ?? 0,
+                    Icons.school, Colors.green),
+                _buildStatCard('Grades', _statistics?['totalGrades'] ?? 0,
+                    Icons.grade, Colors.orange),
+                _buildStatCard('Faculties', _statistics?['totalFaculties'] ?? 0,
+                    Icons.business, Colors.purple),
               ],
             ),
           ],
@@ -317,24 +317,40 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
     );
   }
 
-  Widget _buildStatCard(String title, dynamic value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, dynamic value, IconData icon, Color color) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value.toString(),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value.toString(),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-            Text(title, style: const TextStyle(color: Colors.grey)),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: const TextStyle(color: Colors.grey, fontSize: 10),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -355,10 +371,13 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
                     child: Text(student.firstName?.substring(0, 1) ?? 'S'),
                   ),
                   title: Text(student.fullName),
-                  subtitle: Text('ID: ${student.studentId ?? 'N/A'} • Class: ${student.classId ?? 'N/A'}'),
+                  subtitle: Text(
+                      'ID: ${student.studentId ?? 'N/A'} • Class: ${student.classId ?? 'N/A'}'),
                   trailing: Chip(
                     label: Text(student.studentStatus ?? 'Active'),
-                    backgroundColor: student.studentStatus == 'Active' ? Colors.green.shade100 : Colors.grey.shade100,
+                    backgroundColor: student.studentStatus == 'Active'
+                        ? Colors.green.shade100
+                        : Colors.grey.shade100,
                   ),
                 ),
               );
@@ -385,7 +404,8 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
                     ),
                   ),
                   title: Text(lecturer.fullName),
-                  subtitle: Text('${lecturer.academicDegree ?? ''} • ${lecturer.departmentId ?? 'N/A'}'),
+                  subtitle: Text(
+                      '${lecturer.academicDegree ?? ''} • ${lecturer.departmentId ?? 'N/A'}'),
                 ),
               );
             },
@@ -407,7 +427,8 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
                     backgroundColor: _getGradeColor(grade.letterGrade),
                     child: Text(
                       grade.letterGrade ?? '-',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
                   title: Text(grade.courseName ?? 'Course'),
@@ -419,7 +440,8 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
                     children: [
                       if (grade.gradeStatus != 'Approved')
                         IconButton(
-                          icon: const Icon(Icons.check_circle, color: Colors.green),
+                          icon: const Icon(Icons.check_circle,
+                              color: Colors.green),
                           onPressed: () => _approveGrade(grade),
                           tooltip: 'Approve',
                         ),
@@ -430,43 +452,6 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
                       ),
                     ],
                   ),
-                ),
-              );
-            },
-          );
-  }
-
-  Widget _buildAuditLogsTab() {
-    return _auditLogs.isEmpty
-        ? const Center(child: Text('No audit logs found'))
-        : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _auditLogs.length,
-            itemBuilder: (context, index) {
-              final log = _auditLogs[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getOperationColor(log.operation),
-                    child: Icon(
-                      _getOperationIcon(log.operation),
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text('${log.tableName} - ${log.operationDisplay}'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('User: ${log.username ?? log.userId ?? 'Unknown'}'),
-                      Text(
-                        log.operationDate?.toString() ?? 'Unknown date',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                  isThreeLine: true,
                 ),
               );
             },
@@ -518,4 +503,3 @@ class _AcademicAffairsDashboardScreenState extends State<AcademicAffairsDashboar
     }
   }
 }
-

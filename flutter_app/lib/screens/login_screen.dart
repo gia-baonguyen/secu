@@ -187,28 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Test users info
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Test Users:',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          _buildTestUserInfo('nvhai', 'password123', 'STUDENT'),
-                          _buildTestUserInfo('nv.an', 'password123', 'LECTURER'),
-                          _buildTestUserInfo('admin', 'password123', 'ADMIN'),
-                        ],
-                      ),
-                    ),
-                  ),
+                 
                 ],
               ),
             ),
@@ -218,24 +197,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTestUserInfo(String username, String password, String role) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Text(
-            '$username / $password',
-            style: const TextStyle(fontSize: 12),
-          ),
-          const SizedBox(width: 8),
-          Chip(
-            label: Text(role, style: const TextStyle(fontSize: 10)),
-            padding: EdgeInsets.zero,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ],
-      ),
-    );
-  }
+
 }
 

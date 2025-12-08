@@ -8,13 +8,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Relative Service
  * Business logic for relative (parent/guardian) operations
- * VPD policies ensure relatives only see their children's data
+ * 
+ * SECURITY POLICY:
+ * - Relatives can ONLY view GRADES of their linked children
+ * - Relatives CANNOT see student personal info (first_name, last_name, etc.)
+ * - This is column-level security implemented at application layer
+ *   (VPD only provides row-level security)
  */
 @Service
 public class RelativeService {
@@ -24,15 +28,6 @@ public class RelativeService {
 
     @Autowired
     private StudentRelativeRepository studentRelativeRepository;
-
-    @Autowired
-    private StudentRepository studentRepository;
-
-    @Autowired
-    private GradeRepository gradeRepository;
-
-    @Autowired
-    private EnrollmentRepository enrollmentRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -78,6 +73,11 @@ public class RelativeService {
 
     /**
      * Get all children (students) linked to this relative
+     * 
+     * SECURITY POLICY:
+     * - VPD blocks Relative from accessing STUDENTS table
+     * - So we query ONLY from STUDENT_RELATIVES table (which Relative has access)
+     * - Returns only student_id, NO personal info (first_name, last_name, etc.)
      */
     public List<Student> getMyChildren() {
         UserPrincipal currentUser = getCurrentUser();
@@ -85,21 +85,31 @@ public class RelativeService {
             throw new RuntimeException("User not authenticated");
         }
 
-        // Get all student-relative relationships for this relative
-        List<StudentRelative> relationships = studentRelativeRepository.findByRelativeId(currentUser.getUserId());
-
-        // Get student details for each relationship
-        List<Student> children = new ArrayList<>();
-        for (StudentRelative sr : relationships) {
-            studentRepository.findByStudentId(sr.getStudentId())
-                    .ifPresent(children::add);
-        }
+        // Query ONLY from STUDENT_RELATIVES table (VPD allows this)
+        // DO NOT query from STUDENTS table (VPD blocks this for Relative)
+        String sql = "SELECT sr.student_id, sr.relationship " +
+                     "FROM GMS_ADMIN.STUDENT_RELATIVES sr " +
+                     "WHERE sr.relative_id = ?";
+        
+        List<Student> children = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Student student = new Student();
+            student.setStudentId(rs.getString("student_id"));
+            // All other fields are hidden for privacy
+            student.setFirstName("***");
+            student.setLastName("***");
+            student.setClassId(null);  // Cannot access STUDENTS table
+            student.setStudentStatus("ACTIVE");  // Default
+            return student;
+        }, currentUser.getUserId());
 
         return children;
     }
 
     /**
      * Get a specific child's information
+     * 
+     * SECURITY: VPD blocks access to STUDENTS table
+     * Returns ONLY student_id from STUDENT_RELATIVES
      */
     public Student getChild(String studentId) {
         UserPrincipal currentUser = getCurrentUser();
@@ -107,18 +117,32 @@ public class RelativeService {
             throw new RuntimeException("User not authenticated");
         }
 
-        // Verify this student is linked to the relative
-        if (!isMyChild(studentId)) {
+        // Verify this student is linked to the relative using STUDENT_RELATIVES
+        String sql = "SELECT sr.student_id, sr.relationship " +
+                     "FROM GMS_ADMIN.STUDENT_RELATIVES sr " +
+                     "WHERE sr.student_id = ? AND sr.relative_id = ?";
+        
+        List<Student> results = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Student student = new Student();
+            student.setStudentId(rs.getString("student_id"));
+            student.setFirstName("***");
+            student.setLastName("***");
+            student.setStudentStatus("ACTIVE");
+            return student;
+        }, studentId, currentUser.getUserId());
+
+        if (results.isEmpty()) {
             throw new RuntimeException("Access denied: Student is not linked to you");
         }
-
-        return studentRepository.findByStudentId(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+        
+        return results.get(0);
     }
 
     /**
      * Get grades for a specific child
-     * VPD policy: Relatives can only see grades of their linked children
+     * 
+     * SECURITY: VPD allows Relative to see GRADES of their children
+     * Query directly from GRADES table with join to verify relationship
      */
     public List<Grade> getChildGrades(String studentId) {
         UserPrincipal currentUser = getCurrentUser();
@@ -126,27 +150,34 @@ public class RelativeService {
             throw new RuntimeException("User not authenticated");
         }
 
-        // Verify this student is linked to the relative
+        // Verify this student is linked to the relative first
         if (!isMyChild(studentId)) {
             throw new RuntimeException("Access denied: Student is not linked to you");
         }
 
-        // Get all enrollments for this student
-        List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
+        // Query GRADES directly with course info
+        // VPD policy on GRADES allows Relative to see grades of their children
+        String sql = "SELECT g.grade_id, g.enrollment_id, g.midterm_score, g.final_score, " +
+                     "g.total_score, g.letter_grade, g.grade_status, " +
+                     "c.course_name, c.course_id " +
+                     "FROM GMS_ADMIN.GRADES g " +
+                     "JOIN GMS_ADMIN.ENROLLMENTS e ON g.enrollment_id = e.enrollment_id " +
+                     "JOIN GMS_ADMIN.COURSE_SECTIONS cs ON e.section_id = cs.section_id " +
+                     "JOIN GMS_ADMIN.COURSES c ON cs.course_id = c.course_id " +
+                     "WHERE e.student_id = ?";
 
-        // Get grades for each enrollment
-        List<Grade> grades = new ArrayList<>();
-        for (Enrollment enrollment : enrollments) {
-            String enrollmentId = getFieldValue(enrollment, "enrollmentId");
-            if (enrollmentId != null) {
-                gradeRepository.findByEnrollmentId(enrollmentId).ifPresent(grade -> {
-                    // Set course name
-                    String courseName = getCourseNameByEnrollmentId(enrollmentId);
-                    grade.setCourseName(courseName);
-                    grades.add(grade);
-                });
-            }
-        }
+        List<Grade> grades = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Grade grade = new Grade();
+            grade.setGradeId(rs.getLong("grade_id"));
+            grade.setEnrollmentId(rs.getString("enrollment_id"));
+            grade.setMidtermScore(rs.getBigDecimal("midterm_score"));
+            grade.setFinalScore(rs.getBigDecimal("final_score"));
+            grade.setTotalScore(rs.getBigDecimal("total_score"));
+            grade.setLetterGrade(rs.getString("letter_grade"));
+            grade.setGradeStatus(rs.getString("grade_status"));
+            grade.setCourseName(rs.getString("course_name"));
+            return grade;
+        }, studentId);
 
         return grades;
     }
@@ -168,30 +199,18 @@ public class RelativeService {
 
     /**
      * Check if a student is linked to the current relative
+     * Uses direct SQL to STUDENT_RELATIVES table (VPD allows this)
      */
     private boolean isMyChild(String studentId) {
         UserPrincipal currentUser = getCurrentUser();
         if (currentUser == null) {
             return false;
         }
-        return studentRelativeRepository.existsByStudentIdAndRelativeId(studentId, currentUser.getUserId());
-    }
-
-    /**
-     * Get course name by enrollment ID
-     */
-    private String getCourseNameByEnrollmentId(String enrollmentId) {
-        try {
-            String sql = "SELECT c.course_name " +
-                    "FROM GMS_ADMIN.ENROLLMENTS e " +
-                    "JOIN GMS_ADMIN.COURSE_SECTIONS cs ON e.section_id = cs.section_id " +
-                    "JOIN GMS_ADMIN.COURSES c ON cs.course_id = c.course_id " +
-                    "WHERE e.enrollment_id = ?";
-            String courseName = jdbcTemplate.queryForObject(sql, String.class, enrollmentId);
-            return courseName != null ? courseName : "Unknown Course";
-        } catch (Exception e) {
-            return "Unknown Course";
-        }
+        
+        String sql = "SELECT COUNT(*) FROM GMS_ADMIN.STUDENT_RELATIVES " +
+                     "WHERE student_id = ? AND relative_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, studentId, currentUser.getUserId());
+        return count != null && count > 0;
     }
 
     /**
@@ -203,20 +222,6 @@ public class RelativeService {
             return (UserPrincipal) authentication.getPrincipal();
         }
         return null;
-    }
-
-    /**
-     * Helper method to get field value using reflection
-     */
-    @SuppressWarnings("unchecked")
-    private <T> T getFieldValue(Object obj, String fieldName) {
-        try {
-            java.lang.reflect.Field field = obj.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            return (T) field.get(obj);
-        } catch (Exception e) {
-            return null;
-        }
     }
 }
 

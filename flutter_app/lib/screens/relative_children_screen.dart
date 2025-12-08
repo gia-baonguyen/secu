@@ -5,6 +5,12 @@ import '../models/grade.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 
+/// Screen for relatives to view their linked children
+/// 
+/// SECURITY POLICY:
+/// - Relatives can ONLY view GRADES
+/// - Student personal info (names) is HIDDEN for privacy
+/// - Only student_id and class_id are visible
 class RelativeChildrenScreen extends StatefulWidget {
   const RelativeChildrenScreen({super.key});
 
@@ -98,40 +104,134 @@ class _RelativeChildrenScreenState extends State<RelativeChildrenScreen> {
                   ? const Center(child: Text('No children linked to your account'))
                   : RefreshIndicator(
                       onRefresh: _loadChildren,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _children.length,
-                        itemBuilder: (context, index) {
-                          final child = _children[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                child: Text(
-                                  child.firstName?.substring(0, 1).toUpperCase() ?? 'S',
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                              title: Text(child.fullName),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('ID: ${child.studentId ?? 'N/A'}'),
-                                  Text('Class: ${child.classId ?? 'N/A'}'),
-                                ],
-                              ),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () => _showChildGrades(child),
+                      child: Column(
+                        children: [
+                          // Privacy notice banner
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
                             ),
-                          );
-                        },
+                            child: Row(
+                              children: [
+                                Icon(Icons.privacy_tip, color: Colors.blue.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Vì lý do bảo mật, thông tin cá nhân sinh viên được ẩn. Bạn chỉ có thể xem điểm.',
+                                    style: TextStyle(
+                                      color: Colors.blue.shade700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Children list
+                          Expanded(
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _children.length,
+                              itemBuilder: (context, index) {
+                                final child = _children[index];
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: Theme.of(context).colorScheme.primary,
+                                      child: const Icon(
+                                        Icons.school,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    // Only show student_id, NOT name (privacy policy)
+                                    title: Text(
+                                      'Sinh viên: ${child.studentId ?? 'N/A'}',
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.class_, size: 14, color: Colors.grey),
+                                            const SizedBox(width: 4),
+                                            Text('Lớp: ${child.classId ?? 'N/A'}'),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              child.studentStatus == 'ACTIVE' 
+                                                  ? Icons.check_circle 
+                                                  : Icons.cancel,
+                                              size: 14,
+                                              color: child.studentStatus == 'ACTIVE' 
+                                                  ? Colors.green 
+                                                  : Colors.red,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              child.studentStatus ?? 'N/A',
+                                              style: TextStyle(
+                                                color: child.studentStatus == 'ACTIVE' 
+                                                    ? Colors.green 
+                                                    : Colors.red,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Xem điểm',
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.primary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 12,
+                                            color: Theme.of(context).colorScheme.primary,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    onTap: () => _showChildGrades(child),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
     );
   }
 }
 
+/// Screen to display grades for a specific child
+/// 
+/// SECURITY: Only shows grades, student name is hidden
 class ChildGradesScreen extends StatefulWidget {
   final Student child;
 
@@ -190,7 +290,8 @@ class _ChildGradesScreenState extends State<ChildGradesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.child.fullName}\'s Grades'),
+        // Show student_id instead of name (privacy policy)
+        title: Text('Điểm - ${widget.child.studentId ?? 'N/A'}'),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

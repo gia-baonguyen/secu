@@ -101,13 +101,28 @@ public class VpdContextService {
 
     /**
      * Convert Spring Security role format to VPD user_type format
-     * ADMIN -> Admin, STUDENT -> Student, LECTURER -> Lecturer, etc.
+     * ADMIN -> Admin, STUDENT -> Student, LECTURER -> Lecturer
+     * ACADEMIC_AFFAIRS -> Academic_Affairs, DEPARTMENT_HEAD -> Department_Head
      */
     private String convertRoleToUserType(String role) {
         if (role == null || role.isEmpty()) {
             return role;
         }
-        // Convert to title case: first letter uppercase, rest lowercase
+
+        // Handle compound roles with underscore (ACADEMIC_AFFAIRS, DEPARTMENT_HEAD)
+        if (role.contains("_")) {
+            String[] parts = role.split("_");
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < parts.length; i++) {
+                if (i > 0) result.append("_");
+                // Capitalize first letter, lowercase rest
+                result.append(parts[i].substring(0, 1).toUpperCase())
+                      .append(parts[i].substring(1).toLowerCase());
+            }
+            return result.toString();
+        }
+
+        // Simple role: first letter uppercase, rest lowercase
         return role.substring(0, 1).toUpperCase() + role.substring(1).toLowerCase();
     }
 
